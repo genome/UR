@@ -545,23 +545,9 @@ sub _normalize_class_description_impl {
         }
     }
 
+    # Later code expects these to be listrefs
     for my $field (qw/is id_by has relationships constraints/) {
-        next unless exists $new_class{$field};
-        my $reftype = ref($new_class{$field});
-        if (! $reftype) {
-            # It's a plain string, wrap it in an arrayref
-            $new_class{$field} = [ $new_class{$field} ];
-        } elsif ($reftype eq 'HASH') {
-            # Later code expects it to be a listref - convert it
-            my @params_as_list;
-            foreach my $attr_name ( keys (%{$new_class{$field}}) ) {
-                push @params_as_list, $attr_name;
-                push @params_as_list, $new_class{$field}->{$attr_name};
-            }
-            $new_class{$field} = \@params_as_list;
-        } elsif ($reftype ne 'ARRAY') {
-            die "Class $class_name cannot initialize because its $field section is not a string, arrayref or hashref";
-        }
+        _massage_field_into_arrayref(\%new_class, $field);
     }
 
 
@@ -590,35 +576,7 @@ sub _normalize_class_description_impl {
         $id_properties = $new_class{id_by};
     }
 
-    # Transform the id properties into a list of raw ids,
-    # and move the property definitions into "id_implied"
-    # where present so they can be processed below.
-    my $property_rank = 0;
-    do {
-        my @replacement;
-        my $pos = 0;
-        for (my $n = 0; $n < @$id_properties; $n++) {
-            my $name = $id_properties->[$n];
-
-            my $data = $id_properties->[$n+1];
-            if (ref($data)) {
-                $old_class{id_implied}->{$name} ||= $data;
-                if (my $obj_ids = $data->{id_by}) {
-                    push @replacement, (ref($obj_ids) ? @$obj_ids : ($obj_ids));
-                }
-                else {
-                    push @replacement, $name;
-                }
-                $n++;
-            }
-            else {
-                $old_class{id_implied}->{$name} ||= {};
-                push @replacement, $name;
-            }
-            $old_class{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
-        }
-        @$id_properties = @replacement;
-    };
+    _normalize_id_property_data(\%old_class, \%new_class);
 
     if (@$id_properties > 1
         and grep {$_ eq 'id'} @$id_properties)
@@ -757,6 +715,64 @@ sub _normalize_class_description_impl {
     my $meta_class_name = __PACKAGE__->_resolve_meta_class_name_for_class_name($class_name);
     $new_class{meta_class_name} ||= $meta_class_name;
     return \%new_class;
+}
+
+# Transform the id properties into a list of raw ids,
+# and move the property definitions into "id_implied"
+# where present so they can be processed below.
+sub _normalize_id_property_data {
+    my($old_class_desc, $new_class_desc) = @_;
+
+    my $id_properties = $new_class_desc->{id_by};
+    my $property_rank = 0;
+    my @replacement;
+    my $pos = 0;
+
+    for(my $n = 0; $n < @$id_properties; $n++) {
+        my $name = $id_properties->[$n];
+
+        my $data = $id_properties->[$n+1];
+        if (ref($data)) {
+            $old_class_desc->{id_implied}->{$name} ||= $data;
+            if (my $obj_ids = $data->{id_by}) {
+                push @replacement, (ref($obj_ids) ? @$obj_ids : ($obj_ids));
+            }
+            else {
+                push @replacement, $name;
+            }
+            $n++;
+        }
+        else {
+            $old_class_desc->{id_implied}->{$name} ||= {};
+            push @replacement, $name;
+        }
+        $old_class_desc->{id_implied}->{$name}->{'position_in_module_header'} = $pos++;
+    }
+    @$id_properties = @replacement;
+}
+
+# Given several different kinds of input, convert it into an arrayref
+sub _massage_field_into_arrayref {
+    my($class_desc, $field_name) = @_;
+
+    my $value = $class_desc->{$field_name};
+    my $reftype = ref $value;
+    if (! exists $class_desc->{$field_name}) {
+        $class_desc->{$field_name} = [];
+
+    } elsif (! $reftype) {
+        # It's a plain string, wrap it in an arrayref
+        $class_desc->{$field_name} = [ $value ];
+
+    } elsif ($reftype eq 'HASH') {
+        # Later code expects it to be a listref - convert it
+        $class_desc->{$field_name} = [ %$value ];
+
+    } elsif ($reftype ne 'ARRAY') {
+        my $class_name = $class_desc->{class_name};
+        Carp::croak "$class_name cannot initialize because its $field_name section is not a string, arrayref or hashref";
+
+    }
 }
 
 sub _normalize_property_descriptions_during_normalize_class_description {

@@ -10,12 +10,17 @@ use URT;
 use UR::Role;
 
 subtest basic => sub {
-    plan tests => 18;
+    plan tests => 28;
 
+    my $id_gen = 1;
     role URT::BasicRole {
+        id_by => [
+            role_id_property => { is => 'Integer' },
+        ],
         has => [
             role_property => { is => 'String' },
         ],
+        id_generator => sub { ++$id_gen },
         requires => [ 'required_property', 'required_method' ],
         excludes => [ ],
     };
@@ -44,10 +49,29 @@ subtest basic => sub {
     is($role_instances->[0]->class_name, 'URT::BasicClass', 'Role instance class_name');
     is($role_instance->class_meta, $class_meta, 'Role instance class_meta');
 
+    my @all_class_property_names = qw(role_id_property role_property regular_property required_property);
+    my %property_is_id = (role_id_property => '0 but true', role_property => undef, regular_property => undef, required_property => undef );
+    foreach my $prop_name ( @all_class_property_names ) {
+        my $prop_meta = $class_meta->property($prop_name);
+        is($prop_meta->is_id, $property_is_id{$prop_name}, "property $prop_name is_id value");
+    }
+
+    my %property_source = ( role_id_property => 'URT::BasicRole', role_property => 'URT::BasicRole',
+                            regular_property => 'URT::BasicClass', required_property => 'URT::BasicClass' );
+    foreach my $prop_name ( @all_class_property_names ) {
+        my $expected_source = $property_source{$prop_name};
+        my $prop_meta = $class_meta->property($prop_name);
+        like($prop_meta->is_specified_in_module_header,
+             qr/^$expected_source/,
+             "property $prop_name is_specified_in_module_header");
+    }
+
     my $o = URT::BasicClass->create(required_property => 1, role_property => 1, regular_property => 1);
-    foreach my $method ( qw( required_property role_property regular_property role_method required_method ) ) {
+    foreach my $method ( qw( role_id_property required_property role_property regular_property role_method required_method ) ) {
         ok($o->$method, "call $method");
     }
+
+    is($o->id, $id_gen, 'id_generator was called to generate an ID');
 
     throws_ok
         {
@@ -169,7 +193,7 @@ subtest requires => sub {
 };
 
 subtest 'conflict property' => sub {
-    plan tests => 5;
+    plan tests => 9;
 
     role URT::ConflictPropertyRole1 {
         has => [
@@ -225,6 +249,32 @@ subtest 'conflict property' => sub {
         'Composed role into class sharing property name';
     my $prop_meta = URT::ConflictPropertyClassWithProperty->__meta__->property('conflict_property');
     is($prop_meta->data_type, 'ClassProperty', 'Class gets the class-defined property');
+
+    lives_ok
+        {
+            class URT::ConflictPropertyClassWithIdProperty {
+                id_by => [ conflict_property => { is => 'ClassProperty' } ],
+                roles => ['URT::ConflictPropertyRole1'],
+            }
+        }
+        'Composed role into class sharing id-by property name';
+    $prop_meta = URT::ConflictPropertyClassWithIdProperty->__meta__->property('conflict_property');
+    is($prop_meta->data_type, 'ClassProperty', 'Class gets the class-defined property');
+    ok($prop_meta->is_id, 'property is an id-by property');
+
+    role URT::ConflictProperty::RoleWithIdProperty {
+        id_by => 'role_id_property',
+    };
+    throws_ok
+        {
+            class URT::ConflictProperty::ClassRedefinesIdPropertyAsNonId {
+                has => ['role_id_property'],
+                roles => ['URT::ConflictProperty::RoleWithIdProperty'],
+            }
+        }
+        qr(Cannot compose role URT::ConflictProperty::RoleWithIdProperty: Property 'role_id_property' was declared as a normal property in class URT::ConflictProperty::ClassRedefinesIdPropertyAsNonId, but as an ID property in the role),
+        'Composing role with ID property into class as non-ID property fails';
+
 };
 
 subtest 'conflict methods' => sub {

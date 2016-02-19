@@ -92,6 +92,9 @@ UR::Role - Roles in UR, an alternative to inheritance
 
   package My::Role;
   role My::Role {
+      id_by => [
+          role_id_property => { is => 'String' },
+      ],
       has => [
           role_property => { is => 'String' },
           another_prop  => { is => 'Integer' },
@@ -172,6 +175,12 @@ the class.
 An exception is thrown if multiple Roles are composed together that define
 the same property, even if the composing class defines the same property in
 an attempt to override them.
+
+A class may declare a property with the same name that a role also declares.
+The definition in the class overrides whatever appears in the role.  An
+exception is thrown if a role declares an ID property in the 'id_by' section
+and the consuming class redeclares it in the 'has' section as a normal
+property.
 
 =head3 Method conflicts
 
@@ -265,7 +274,7 @@ Roles can hook into methods defined in consuming classes by using the "before",
 
   use UR;
   package RoleWithModifiers;
-  use UR::Role qw(before after);
+  use UR::Role qw(before after around);
   role RoleWithModifiers { };
   before 'do_something' => sub {
       my($self, @params) = @_;

@@ -21,6 +21,7 @@ UR::Object::Type->define(
     doc => 'Object representing a role',
     id_by => 'role_name',
     has => [
+        id_by       => { is => 'ARRAY', doc => 'List of ID properties and their definitions' },
         role_name   => { is => 'Text', doc => 'Package name identifying the role' },
         class_names => { is => 'Text', is_many => 1, doc => 'Class names composing this role' },
         methods     => { is => 'HASH', doc => 'Map of method names and coderefs', default => {} },
@@ -46,9 +47,14 @@ sub property_data {
     return $self->has->{$property_name};
 }
 
-sub property_names {
+sub has_property_names {
     my $self = shift;
     return keys %{ $self->has };
+}
+
+sub id_by_property_names {
+    my $self = shift;
+    return @{ $self->id_by };
 }
 
 sub method_names {
@@ -122,6 +128,8 @@ sub _normalize_role_description {
     # processing the properties.  We need to, too
     @$old_role{'has', 'attributes_have'} = @$new_role{'has','attributes_have'};
     @$new_role{'has','attributes_have'} = ( {}, {} );
+    UR::Object::Type::_massage_field_into_arrayref($new_role, 'id_by');
+    UR::Object::Type::_normalize_id_property_data($old_role, $new_role);
     UR::Object::Type::_process_class_definition_property_keys($old_role, $new_role);
     _complete_property_descriptions($new_role);
 
@@ -228,6 +236,7 @@ sub _apply_roles_to_class_desc {
     _validate_role_requirements($desc, @role_objs);
     _validate_class_desc_overrides($desc, @role_objs);
 
+    my $id_property_names_to_add = _collect_id_property_names_from_roles($desc, @role_objs);
     my $properties_to_add = _collect_properties_from_roles($desc, @role_objs);
     my $meta_properties_to_add = _collect_meta_properties_from_roles($desc, @role_objs);
     my $overloads_to_add = _collect_overloads_from_roles($desc, @role_objs);
@@ -238,7 +247,7 @@ sub _apply_roles_to_class_desc {
     do { $_->prototype->add_class_name($desc->{class_name}) } foreach @role_objs;
 
     UR::Role::Param->replace_unbound_params_in_struct_with_values(
-            [ $properties_to_add, $meta_properties_to_add, $overloads_to_add ],
+            [ $id_property_names_to_add, $properties_to_add, $meta_properties_to_add, $overloads_to_add ],
             @role_objs);
 
     _import_methods_from_roles_into_namespace($desc->{class_name}, \@role_objs);
@@ -246,6 +255,7 @@ sub _apply_roles_to_class_desc {
     _apply_method_modifiers_to_namespace($desc, $method_modifiers_to_add);
 
     _merge_role_meta_properties_into_class_desc($desc, $meta_properties_to_add);
+    _merge_role_id_property_names_into_class_desc($desc, $id_property_names_to_add);
     _merge_role_properties_into_class_desc($desc, $properties_to_add);
 }
 
@@ -294,6 +304,12 @@ sub _merge_role_properties_into_class_desc {
      @{$desc->{has}}{@property_names} = @$properties_to_add{@property_names};
 }
 
+sub _merge_role_id_property_names_into_class_desc {
+    my($desc, $id_properties_to_add) = @_;
+
+    push @{$desc->{id_by}}, @$id_properties_to_add;
+}
+
 sub _role_prototypes_with_params_for_class_desc {
     my $desc = shift;
 
@@ -314,6 +330,31 @@ sub _role_prototypes_with_params_for_class_desc {
     return @role_prototypes;
 }
 
+sub _collect_id_property_names_from_roles {
+    my($desc, @role_objs) = @_;
+
+    my %class_id_by_properties = map { $_ => 1 } @{ $desc->{id_by} };
+    my %class_property_is_id_by = map { $_ => $class_id_by_properties{$_} }
+                                  keys %{ $desc->{has} };
+
+    my @property_names_to_add;
+    foreach my $role ( @role_objs ) {
+        my @role_id_property_names = $role->id_by_property_names;
+
+        my @conflict = grep { exists($class_property_is_id_by{$_}) and ! $class_property_is_id_by{$_} }
+                       @role_id_property_names;
+        if (@conflict) {
+            Carp::croak(sprintf(q(Cannot compose role %s: Property '%s' was declared as a normal property in class %s, but as an ID property in the role),
+                                $role->role_name,
+                                join(q(', '), @conflict),
+                                $desc->{class_name},
+                        ));
+        }
+        push @property_names_to_add, @role_id_property_names;
+    }
+    return \@property_names_to_add;
+}
+
 sub _collect_properties_from_roles {
     my($desc, @role_objs) = @_;
 
@@ -321,7 +362,7 @@ sub _collect_properties_from_roles {
 
     my(%properties_to_add, %source_for_properties_to_add);
     foreach my $role ( @role_objs ) {
-        my @role_property_names = $role->property_names;
+        my @role_property_names = $role->has_property_names;
         foreach my $property_name ( @role_property_names ) {
             my $prop_definition = $role->property_data($property_name);
             if (my $conflict = $source_for_properties_to_add{$property_name}) {
@@ -463,7 +504,7 @@ sub _validate_role_requirements {
         }
 
         # Properties and methods from this role can satisfy requirements for later roles
-        foreach my $name ( $role->property_names, $role->method_names ) {
+        foreach my $name ( $role->has_property_names, $role->method_names ) {
             $found_properties_and_methods{$name} = 1;
         }
     }
@@ -761,9 +802,13 @@ same properties as L<UR::Object::Type> instances.
 
 Returns a hashref of property data about the named property.
 
-=item property_names()
+=item has_property_names()
 
-Returns a list of all the properties in the role's C<has>.
+Returns a list of all the properties named in the role's C<has>.
+
+=item id_by_property_names()
+
+Returns a list of all the properties named in the roles's C<id_by>.
 
 =item method_names()
 
