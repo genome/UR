@@ -150,11 +150,7 @@ sub execute {
     # TODO: instead of using an iterator, get all the results back in a list and
     # have the styler use the list, since it needs all the results to space the columns
     # out properly anyway
-    my $iterator;
-    unless ($iterator = $self->subject_class_name->create_iterator($bool_expr)) {
-        $self->error_message($self->subject_class_name->error_message);
-        return;
-    }
+    my $iterator = $self->create_iterator_for_results_from_boolexpr($bool_expr);
 
     my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
     my $style_module = $style_module_name->new(
@@ -172,6 +168,15 @@ sub execute {
 sub resolve_show_column_names {
     my $self = shift;
     $self->_resolve_field_list;
+}
+
+sub create_iterator_for_results_from_boolexpr {
+    my($self, $bx) = @_;
+    my $iterator = $self->subject_class_name->create_iterator($bx);
+    unless ($iterator) {
+        $self->fatal_message($self->subject_class_name->error_message);
+    }
+    return $iterator;
 }
 
 sub _resolve_field_list {
