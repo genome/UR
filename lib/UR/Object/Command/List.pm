@@ -142,8 +142,7 @@ sub execute {
     eval "use $ns";
     my $subject_class = UR::Object::Type->get($subject_class_name);
 
-    # Determine things to show
-    my @fields = $self->_resolve_field_list;
+    my @fields = $self->resolve_show_column_names;
 
     my $bool_expr = $self->_resolve_boolexpr();
     return unless (defined $bool_expr);
@@ -168,6 +167,11 @@ sub execute {
     $style_module->format_and_print;
 
     return 1;
+}
+
+sub resolve_show_column_names {
+    my $self = shift;
+    $self->_resolve_field_list;
 }
 
 sub _resolve_field_list {
