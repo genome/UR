@@ -152,15 +152,7 @@ sub execute {
     # out properly anyway
     my $iterator = $self->create_iterator_for_results_from_boolexpr($bool_expr);
 
-    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
-    my $style_module = $style_module_name->new(
-        iterator => $iterator,
-        show => \@fields,
-        csv_delimiter => $self->csv_delimiter,
-        noheaders => $self->noheaders,
-        output => $self->output,
-    );
-    $style_module->format_and_print;
+    $self->display_styled_results($iterator, \@fields);
 
     return 1;
 }
@@ -177,6 +169,20 @@ sub create_iterator_for_results_from_boolexpr {
         $self->fatal_message($self->subject_class_name->error_message);
     }
     return $iterator;
+}
+
+sub display_styled_results {
+    my($self, $iterator, $fields) = @_;
+
+    my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
+    my $style_module = $style_module_name->new(
+        iterator => $iterator,
+        show => $fields,
+        csv_delimiter => $self->csv_delimiter,
+        noheaders => $self->noheaders,
+        output => $self->output,
+    );
+    $style_module->format_and_print;
 }
 
 sub _resolve_field_list {
