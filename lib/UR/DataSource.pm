@@ -511,7 +511,7 @@ sub _first_class_in_inheritance_with_a_table {
     my $found = "";
     for ($class_object, $class_object->ancestry_class_metas)
     {                
-        if ($_->table_name)
+        if ($_->has_direct_table)
         {
             $found = $_->class_name;
             last;

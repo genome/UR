@@ -131,9 +131,13 @@ sub comparison_value_and_escape_character_to_regex {
     # Wrap the regex in delimiters.
     $regex = "^${regex}\$";
 
-    $regex = eval { qr($regex) };
-    if ($@) {
-        Carp::confess($@);
+    my $exception = do {
+        local $@;
+        $regex = eval { qr($regex) };
+        $@;
+    };
+    if ($exception) {
+        Carp::confess($exception);
     }
 
     return $regex;

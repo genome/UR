@@ -1010,7 +1010,7 @@ sub create_entity {
     }
 
     my $entity = $self->_construct_object($class, %default_values, %$params, @extra);
-    return unless $entity;
+    return unless defined $entity;
     $self->add_change_to_transaction_log($entity, $construction_method);
     $self->add_change_to_transaction_log($entity, 'load') if $construction_method eq '__define__';
 
@@ -2603,7 +2603,6 @@ sub has_changes {
 }
 
 sub commit {
-
     Carp::carp 'UR::Context::commit() called as a function, not a method.  Assumming commit on current context' unless @_;
 
     my $self = shift;
@@ -2632,6 +2631,8 @@ sub commit {
 
 sub _after_commit {
     my $self = shift;
+
+    $_->delete foreach UR::Change->get();
 
     foreach ( $self->all_objects_loaded('UR::Object') ) {
         delete $_->{'_change_count'};
@@ -2798,7 +2799,7 @@ sub _order_data_sources_for_saving {
 
     my %can_savepoint = map { $_->id => $_->can_savepoint } @data_sources;
     my %classes = map { $_->id => $_->class } @data_sources;
-    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? -1 : 0 } @data_sources;  # Default data sources go last
+    my %is_default = map { $_->id => $_->isa('UR::DataSource::Default') ? 1 : 0 } @data_sources;  # Default data sources go last
 
     return
         sort {

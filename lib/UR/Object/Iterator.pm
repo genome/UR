@@ -3,39 +3,15 @@ package UR::Object::Iterator;
 use strict;
 use warnings;
 require UR;
+require UR::Iterator;
 our $VERSION = "0.44"; # UR $VERSION;
 
 our @CARP_NOT = qw( UR::Object );
 
+our @ISA = qw( UR::Iterator );
+
 # These are no longer UR Objects.  They're regular blessed references that
 # get garbage collected in the regular ways
-
-#use UR;
-#
-#UR::Object::Type->define(
-#    class_name      => __PACKAGE__,
-#    has => [
-#        filter_rule_id          => {},
-#    ],
-#);
-#
-#sub create_for_filter_rule {
-#    my $class = shift;
-#    my $filter_rule = shift;
-#    my $code = $UR::Context::current->get_objects_for_class_and_rule($filter_rule->subject_class_name,$filter_rule,undef,1);
-#    
-#    my $self = $class->SUPER::create(
-#        # TODO: some bug with frozen items?
-#        filter_rule_id      => $filter_rule->id,        
-#    );
-#    
-#    $self->_iteration_closure($code);    
-#    return $self;
-#}
-
-sub create {
-    die "Don't call UR::Object::Iterator->create(), use create_for_filter_rule() instead";
-}
 
 sub create_for_filter_rule {
     my $class = shift;
@@ -49,21 +25,6 @@ sub create_for_filter_rule {
                __PACKAGE__;
     return $self;
 }
-
-
-sub _iteration_closure {
-    my $self = shift;
-    if (@_) {
-        return $self->{_iteration_closure} = shift;
-    }
-    $self->{_iteration_closure};
-}
-
-
-sub next {
-    shift->{_iteration_closure}->(@_);
-}
-
 
 1;
 
@@ -101,7 +62,7 @@ UR::Object::Iterator instances are normal Perl object references, not
 UR-based objects.  They do not live in the Context's object cache, and
 obey the normal Perl rules about scoping.
 
-=head1 METHODS
+=head1 CONSTRUCTOR
 
 =over 4
 
@@ -113,17 +74,22 @@ Creates an iterator object based on the given BoolExpr (rule).  Under the
 hood, it calls get_objects_for_class_and_rule() on the current Context
 with the $return_closure flag set to true.
 
+=back
+
+=head2 Methods inherited from UR::Iterator
+
 =item next
 
-  $obj = $iter->next();
+=item map
 
-Return the next object matching the iterator's rule.  When there are no more
-matching objects, it returns undef.
+=item peek
+
+=item remaining
 
 =back
 
 =head1 SEE ALSO
 
-UR::Object, UR::Context
+L<UR::Iterator>, L<UR::Object>, L<UR::Context>
 
 =cut

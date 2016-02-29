@@ -91,7 +91,7 @@ sub _build_sub_command_mapping {
             UR::Object::Type->get($command_class_name);
         }
         else {
-            $class->_build_sub_command($command_class_name, @inheritance);
+            next if not $class->_build_sub_command($command_class_name, @inheritance);
         }
 
         # Created commands need to know where their parameters came from

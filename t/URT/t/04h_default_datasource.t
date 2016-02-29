@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 6;
+use Test::More tests => 7;
 use Test::Exception;
 
 use File::Basename;
@@ -255,4 +255,30 @@ subtest 'sync all before committing' => sub {
     );
 
     ok(UR::Context->current->commit, 'commit');
+};
+
+subtest 'subclassify_by' => sub {
+    plan tests => 2;
+
+    class SubclassifyByParent {
+        has => [
+            subclass_name => { is => 'String' },
+        ],
+        is_abstract => 1,
+        subclassify_by => 'subclass_name',
+    };
+    sub SubclassifyByParent::__load__ {
+        my ($class, $bx, $headers) = @_;
+        $headers = ['subclass_name', 'id'];
+        my @data = ( [ 'SubclassifyByParent::TheSubclass', 1] );
+        return($headers, sub { shift @data });
+    }
+
+    class SubclassifyByParent::TheSubclass {
+        is => 'SubclassifyByParent',
+    };
+
+    my @objs = SubclassifyByParent->get();
+    is(scalar(@objs), 1, 'get() on parent class returns one object');
+    is($objs[0]->id, 1, 'Was the correct object');
 };

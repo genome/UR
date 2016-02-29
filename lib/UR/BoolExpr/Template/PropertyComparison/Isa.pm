@@ -14,6 +14,7 @@ sub _compare {
     
     if (ref $comparison_value) {
         # Reference... maybe an Object?
+        local $@;
         if (eval { $comparison_value->isa('UR::Object::Type')} ) {
             # It's a class object.  Compare to the Class's class_name
             $comparison_value = $comparison_value->class_name;

@@ -7,6 +7,11 @@ require UR;
 our $VERSION = "0.44"; # UR $VERSION;
 
 use Carp qw(croak confess shortmess);
+use constant TRANSACTION_STATE_OPEN => 'open';
+use constant TRANSACTION_STATE_COMMITTED => 'committed';
+
+use Exporter qw(import);
+our @EXPORT_OK = qw(TRANSACTION_STATE_OPEN TRANSACTION_STATE_COMMITTED);
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,
@@ -14,7 +19,9 @@ UR::Object::Type->define(
     has => [
         begin_point     => { is => 'Integer' },
         end_point       => { is => 'Integer', is_optional => 1},  # FIXME is this ever used anywhere?
-        state           => { is => 'Text' }, # open, committed, rolled-back
+        state           => { is => 'Text', valid_values => [TRANSACTION_STATE_OPEN, TRANSACTION_STATE_COMMITTED] },
+        commit_validator => { default_value => 'changes_can_be_saved',
+                              doc => 'validation function used before commit() can succeed' },
     ],
     is_transactional => 1,
 );
@@ -31,6 +38,10 @@ sub delete {
 
 sub begin {
     my $class = shift;
+    my %params = @_;
+
+    delete @params{'begin_point', 'end_point', 'state'}; # These are set within this function
+
     my $id = $last_transaction_id++;
 
     my $begin_point = @change_log;
@@ -45,9 +56,9 @@ sub begin {
     my $self = $class->create(
         id => $id,
         begin_point => $begin_point,
-        state => "open",
+        state => TRANSACTION_STATE_OPEN,
         parent => $last_trans,
-        @_
+        %params,
     );
 
     unless ($self) {
@@ -147,7 +158,7 @@ sub rollback {
         }
     }
 
-    if ($self->state ne "open") {
+    if ($self->state ne TRANSACTION_STATE_OPEN) {
         Carp::confess("Cannot rollback a transaction that is " . $self->state . ".")
     }
 
@@ -241,7 +252,7 @@ sub commit {
         }
     }
 
-    if ($self->state ne "open") {
+    if ($self->state ne TRANSACTION_STATE_OPEN) {
         Carp::confess("Cannot commit a transaction that is " . $self->state . ".")
     }
 
@@ -251,12 +262,13 @@ sub commit {
     }
     $self->__signal_change__('precommit');
 
-    unless ($self->changes_can_be_saved) {
+    my $validator = $self->commit_validator;
+    unless ($self->$validator()) {
         return;
     }
 
-    $self->state("committed");
-    if ($self->state eq 'committed') {
+    $self->state(TRANSACTION_STATE_COMMITTED);
+    if ($self->state eq TRANSACTION_STATE_COMMITTED) {
         $self->__signal_change__('commit',1);
     }
     else {
@@ -310,11 +322,11 @@ sub eval_or_do {
         $class->debug_message(shortmess('Rolling back transaction'));
         $class->debug_message($eval_error) if ($eval_error);
         unless($tx->rollback()) {
-            die 'failed to rollback transaction';
+            Carp::croak 'failed to rollback transaction';
         }
     } else {
         unless($tx->commit()) {
-            die 'failed to commit transaction';
+            Carp::croak 'failed to commit transaction';
         }
     }
 
@@ -403,6 +415,16 @@ objects.  As all activity to objects occurs in some kind of transaction
 context, the newly created transaction exists within whatever context was
 current before the call to begin().
 
+  $t = UR::Context::Transaction->begin(commit_validator => sub { ... });
+
+A validation function may be assigned with the C<commit_validator> property.
+When the transaction is committed, this function is called.  The commit
+proceeds if this function returns a true value.  The default function,
+C<changes_can_be_saved> requires that all objects changed within the
+transaction be valid, ie. that C<$obj->__errors__()> returns an empty list.
+The validation function is passed one argument: the transaction object
+being committed.
+
 =back
 
 =head1 METHODS
@@ -414,7 +436,16 @@ current before the call to begin().
   $t->commit();
 
 Causes all objects with changes to save those changes back to the underlying
-context.  
+context.
+
+If the validation function (specified with the C<commit_validator> param when
+the transaction was created with C<begin()>) returns false, the changes are
+not committed to the encompassing context, C<commit()> returns false and this
+transaction remains in effect.
+
+Returns true if all the transaction's changes are committed to the encompassing
+Context.  This transaction object then becomes invalid, and its state will be
+'committed'.
 
 =item rollback
 
@@ -424,6 +455,9 @@ Causes all objects with changes to have those changes reverted to their
 state when the transaction began.  Classes with properties whose meta-property
 is_transactional => 0 are not tracked within a transaction and will not be
 reverted.
+
+After C<rollback()>, this transaction becomes invalid, and the object will become
+a L<UR::DeletedRef>.
 
 =item delete
 
@@ -470,6 +504,11 @@ If the BLOCK throws an exception, it will be caught, the software transaction
 rolled back, and the exception will be re-thrown with die().
 
 =back
+
+=head1 EXPORTS
+
+This module can export constants that match the valid values of the C<state>
+property: TRANSACTION_STATE_OPEN and TRANSACTION_STATE_COMMITTED
 
 =head1 SEE ALSO
 

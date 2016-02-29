@@ -457,7 +457,7 @@ sub convert_change_list_for_checking {
         next if $changed_aspect eq 'query';
         my $undo_data = $change->{'undo_data'};
         if (exists $changes->{$changed_class_name}->{$changed_id}->{$changed_aspect}) {
-            die "Two types of changes for the same thing in the same transaction!?";
+            die "$changed_class_name id $changed_id has two changes for aspect '$changed_aspect'";
         }
 
 

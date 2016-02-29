@@ -142,8 +142,7 @@ sub execute {
     eval "use $ns";
     my $subject_class = UR::Object::Type->get($subject_class_name);
 
-    # Determine things to show
-    my @fields = $self->_resolve_field_list;
+    my @fields = $self->resolve_show_column_names;
 
     my $bool_expr = $self->_resolve_boolexpr();
     return unless (defined $bool_expr);
@@ -151,23 +150,39 @@ sub execute {
     # TODO: instead of using an iterator, get all the results back in a list and
     # have the styler use the list, since it needs all the results to space the columns
     # out properly anyway
-    my $iterator;
-    unless ($iterator = $self->subject_class_name->create_iterator($bool_expr)) {
-        $self->error_message($self->subject_class_name->error_message);
-        return;
+    my $iterator = $self->create_iterator_for_results_from_boolexpr($bool_expr);
+
+    $self->display_styled_results($iterator, \@fields);
+
+    return 1;
+}
+
+sub resolve_show_column_names {
+    my $self = shift;
+    $self->_resolve_field_list;
+}
+
+sub create_iterator_for_results_from_boolexpr {
+    my($self, $bx) = @_;
+    my $iterator = $self->subject_class_name->create_iterator($bx);
+    unless ($iterator) {
+        $self->fatal_message($self->subject_class_name->error_message);
     }
+    return $iterator;
+}
+
+sub display_styled_results {
+    my($self, $iterator, $fields) = @_;
 
     my $style_module_name = __PACKAGE__ . '::' . ucfirst $self->style;
     my $style_module = $style_module_name->new(
         iterator => $iterator,
-        show => \@fields,
+        show => $fields,
         csv_delimiter => $self->csv_delimiter,
         noheaders => $self->noheaders,
         output => $self->output,
     );
     $style_module->format_and_print;
-
-    return 1;
 }
 
 sub _resolve_field_list {

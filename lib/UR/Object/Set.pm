@@ -13,6 +13,7 @@ use overload ('==' => sub { $_[0] . ''  eq $_[1] . '' } );
 use overload ('eq' => sub { $_[0] . ''  eq $_[1] . '' } );
 use overload ('!=' => sub { $_[0] . ''  ne $_[1] . '' } );
 use overload ('ne' => sub { $_[0] . ''  ne $_[1] . '' } );
+use overload ('cmp' => sub { $_[0]->id cmp $_[1]->id } );
 
 class UR::Object::Set {
     is => 'UR::Value',
