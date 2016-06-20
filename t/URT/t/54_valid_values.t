@@ -91,11 +91,11 @@ for my $class (qw/Game::Card/) {
        'First error message is correct');
     my $c4_id = $c4->id;
     like($error_messages[-2],
-       qr/Game::Card identified by $c4_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+INVALID: property 'suit': The value badsuit is not in the list of valid values for suit.  Valid values are: heart, diamond, club, spade\s+Current state:\s+\$VAR1 = bless\( {/s,
+       qr/Game::Card identified by $c4_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+INVALID: property 'suit': The value badsuit is not in the list of valid values for suit.  Valid values are: heart, diamond, club, spade\s+Current state:\s+\$VAR1 = bless\( \{/s,
        'Second error message is correct');
     my $c3_id = $c3->id;
     like($error_messages[-3],
-       qr/Game::Card identified by $c3_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+Current state:\s+\$VAR1 = bless\( {/s,
+       qr/Game::Card identified by $c3_id has problems on\s+INVALID: property 'pips': No value specified for required property\s+Current state:\s+\$VAR1 = bless\( \{/s,
        'Third error message is correct');
 }
 
