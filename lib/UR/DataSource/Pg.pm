@@ -222,13 +222,19 @@ sub cast_for_data_conversion {
 sub _resolve_order_by_clause_for_column {
     my($self, $column_name, $query_plan, $property_meta) = @_;
 
-    my $column_clause = $self->SUPER::_resolve_order_by_clause_for_column($column_name, $query_plan);
+    my $column_clause = $column_name;
 
     my $is_text_type = $property_meta->is_text;
     if ($is_text_type) {
         # Tell the DB to sort the same order as Perl's cmp
         $column_clause .= q( COLLATE "C");
     }
+
+    my $is_desc = $query_plan->order_by_column_is_descending($column_name);
+    if ($is_desc) {
+        $column_clause .= q( DESC);
+    }
+
     return $column_clause;
 }
 

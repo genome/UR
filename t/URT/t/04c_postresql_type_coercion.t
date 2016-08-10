@@ -1,7 +1,7 @@
 #!/usr/bin/env perl
 use strict;
 use warnings;
-use Test::More tests => 2;
+use Test::More tests => 3;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -63,3 +63,6 @@ is(get_sql(sub { URT::A->get('some_event_time like' => '1970-01-01%') }),
     q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.some_event_time, 'YYYY-MM-DD HH24:MI:SS.US') like ? escape E'\\\\' order by A.a_id COLLATE "C"},
     "to_char coercion on Timestamp column");
 
+is(get_sql(sub { URT::A->get('some_event_time like' => '1970-01-01%', -order => ['-id']) }),
+    q{select A.a_id, A.creation_date, A.some_event_time from A where to_char(A.some_event_time, 'YYYY-MM-DD HH24:MI:SS.US') like ? escape E'\\\\' order by A.a_id COLLATE "C" DESC},
+    "to_char coercion on Timestamp column");
