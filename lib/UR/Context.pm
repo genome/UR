@@ -865,7 +865,6 @@ sub create_entity {
             delete $default_values{$name};
         }
         else {
-            $DB::single = 1;
             my $query = $default_value_requires_query->{$name};
             my @query;
             if (ref($query) eq 'HASH') {
