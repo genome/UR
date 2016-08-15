@@ -215,7 +215,7 @@ sub format_and_print{
 
              my $property_node = $object_node->addChild ($doc->createElement($property));
 
-             my @items = $object->$property;
+             my @items = $self->_object_property_to_string($object, $property);
 
              my $reftype = ref $items[0];
 
