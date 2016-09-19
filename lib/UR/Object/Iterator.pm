@@ -78,6 +78,8 @@ with the $return_closure flag set to true.
 
 =head2 Methods inherited from UR::Iterator
 
+=over 4
+
 =item next
 
 =item map

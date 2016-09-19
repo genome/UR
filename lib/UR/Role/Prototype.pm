@@ -841,6 +841,8 @@ Returns an arrayref of role names that may not be composed with this role.
 
 When a role is defined, these methods are injected into the role's namespace
 
+=over 4
+
 =item create(%params)
 
 Return a L<UR::Role::PrototypeWithParams> object representing this role with
