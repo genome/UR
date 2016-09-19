@@ -558,7 +558,7 @@ sub _comparator_for_operator_and_property {
     }
 }
         
-
+my $iterator_serial = 0;
 sub create_iterator_closure_for_rule {
     my($self,$rule) = @_;
 
@@ -698,7 +698,7 @@ sub create_iterator_closure_for_rule {
         UR::DBI->sql_fh->printf("\nFILE: %s\nFILTERS %s\n\n", $self->server, $filter_list);
     }
 
-    $self->{'_last_read_fingerprint'} ||= '';
+    $self->{'_last_read_serial'} ||= '';
 
     my $record_separator = $self->record_separator;
     my $cache_slot = $self->_allocate_offset_cache_slot();
@@ -709,7 +709,7 @@ sub create_iterator_closure_for_rule {
     my $lines_matched = 0;
 
     my $fh;  # File handle we'll be reading from
-    my $read_fingerprint;   # The stringified version of $iterator (to avoid circular references), filled in below
+    my $this_iterator_serial = $iterator_serial++;
     my $iterator = sub {
 
         unless (ref($fh)) {
@@ -725,7 +725,7 @@ sub create_iterator_closure_for_rule {
             $monitor_printed_first_fetch = 1;
         }
 
-        if ($self->{'_last_read_fingerprint'} ne $read_fingerprint) {
+        if ($self->{'_last_read_serial'} ne $this_iterator_serial) {
             UR::DBI->sql_fh->printf("FILE: Resetting file position to $file_pos\n") if $ENV{'UR_DBI_MONITOR_SQL'};
             # The last read was from a different request, reset the position
             $fh->seek($file_pos,0);
@@ -737,7 +737,7 @@ sub create_iterator_closure_for_rule {
             }
             $file_pos = $self->_file_position();
 
-            $self->{'_last_read_fingerprint'} = $read_fingerprint;
+            $self->{'_last_read_serial'} = $this_iterator_serial;
         }
 
         local $/;   # Make sure some wise guy hasn't changed this out from under us
@@ -848,7 +848,6 @@ sub create_iterator_closure_for_rule {
             return $next_candidate_row;
         }
     }; # end sub $iterator
-    $read_fingerprint = $iterator . '';
 
     Sub::Name::subname('UR::DataSource::File::__datasource_iterator(closure)__', $iterator);
 
