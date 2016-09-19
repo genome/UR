@@ -1,3 +1,13 @@
+libur-perl (0.45-1) unstable; urgency=low
+
+  * UR now supports Roles.  See the docs in UR::Role.
+  * -limit and -offset are now handled in the database where possible.
+  * Added method fatal_message() to the base class.  Acts like error_message(), but as an exception instead of just a print.
+  * Software transactions can have custom validators.
+  * Lots of bug fixes
+
+ -- Anthony Brummett <brummett@cpan.org>  Tue, 20 Sep 2016 10:30:00 -600
+
 libur-perl (0.44-1) unstable; urgency=low
 
   * Added UR::Context::AutoUnloadPool - a mechanism for automatically unloading objects when a leaving a scope.
