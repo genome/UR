@@ -9,7 +9,7 @@ use strict;
 use warnings FATAL => 'all';
 
 # Set the version at compile time, since some other modules borrow it.
-our $VERSION = "0.44"; # UR $VERSION
+our $VERSION = "0.45"; # UR $VERSION
 
 # Ensure we get detailed errors while starting up.
 # This is disabled at the bottom of the module.
@@ -475,7 +475,7 @@ UR - rich declarative transactional objects
 
 =head1 VERSION
 
-This document describes UR version 0.44
+This document describes UR version 0.45
 
 =head1 SYNOPSIS
 
@@ -796,7 +796,7 @@ for high-throughput genomics.
 
 =head1 LICENCE AND COPYRIGHT
 
-Copyright (C) 2002-2015 Washington University in St. Louis, MO.
+Copyright (C) 2002-2016 Washington University in St. Louis, MO.
 
 This sofware is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.

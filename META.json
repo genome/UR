@@ -105,7 +105,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.44",
+   "version" : "0.45",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",
@@ -154,7 +154,6 @@
       "Steven Wallace <swallace@genome.wustl.edu>",
       "James Koval <jkoval@genome.wustl.edu>",
       "Gabriel Sanderson <gsanders@genome.wustl.edu>",
-      "Eddie Belter <ebelter@genome.wustl.edu>",
       "Scott Smith <sakoht@cpan.org>",
       "Brian Derickson <bdericks@genome.wustl.edu>",
       "Justin Lolofie <jlolofie@genome.wustl.edu>",
@@ -171,10 +170,14 @@
       "David Morton <davidlmorton@gmail.com>",
       "David Morton <davidlmorton@users.noreply.github.com>",
       "Sebastian Heil <(none)>",
-      "APipe Tester <apipe-tester@genome.wustl.edu>",
       "nnutter <nnutter@genome.wustl.edu>",
       "Nathaniel Nutter <iam@nnutter.com>",
+      "Eddie Belter <ebelter@genome.wustl.edu>",
+      "Eddie Belter <ebelter@gmail.com>",
+      "Jim Eldred <jeldred@genome.wustl.edu>",
+      "Yanick Champoux <yanick@babyl.dyndns.org>",
       "Thomas B. Mooney <tmooney@genome.wustl.edu>",
+      "Thomas B. Mooney <mooney@wustl.edu>",
       "Anthony Brummett <brummett@gmail.com>",
       "Anthony Brummett <abrummet@genome.wustl.edu>"
    ]

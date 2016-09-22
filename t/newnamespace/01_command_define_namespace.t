@@ -23,6 +23,16 @@ push @INC,$tempdir; # so it can find the namespace modules it's creating
 my $cmd = UR::Namespace::Command::Define::Namespace->create(nsname => 'NewNamespace');
 ok($cmd, 'create UR::Namespace::Command::Define::Namespace');
 
+my $got_to_end = 0;
+END {
+    unless ($got_to_end) {
+        print STDERR "The test didn't finish, here the output from the define namespace command\n";
+        print STDERR "*** STATUS messages:\n", join("\n", $cmd->status_messages),"\n\n";
+        print STDERR "*** WARNING messages:\n", join("\n", $cmd->warning_messages),"\n\n";
+        print STDERR "*** ERROR messages:\n", join("\n", $cmd->error_messages),"\n\n";
+    }
+}
+
 $cmd->dump_status_messages(0);
 $cmd->dump_error_messages(0);
 $cmd->dump_warning_messages(0);
@@ -51,3 +61,5 @@ is($messages[2], 'A   NewNamespace::DataSource::Meta (UR::DataSource::Meta)', 'M
 like($messages[3],
      qr(A   /.+/NewNamespace/DataSource/Meta\.sqlite3n?-dump [(]Metadata DB skeleton[)]),
      'Message adding metaDB dump file');
+
+$got_to_end = 1;

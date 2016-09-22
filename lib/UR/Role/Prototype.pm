@@ -14,7 +14,7 @@ use List::MoreUtils qw(any);
 use Carp;
 our @CARP_NOT = qw(UR::Object::Type);
 
-our $VERSION = "0.44"; # UR $VERSION;;
+our $VERSION = "0.45"; # UR $VERSION;;
 
 UR::Object::Type->define(
     class_name => 'UR::Role::Prototype',
@@ -840,6 +840,8 @@ Returns an arrayref of role names that may not be composed with this role.
 =head2 Role namespace methods
 
 When a role is defined, these methods are injected into the role's namespace
+
+=over 4
 
 =item create(%params)
 
