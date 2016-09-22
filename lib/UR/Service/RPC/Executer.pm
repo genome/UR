@@ -4,7 +4,7 @@ use UR;
 
 use strict;
 use warnings;
-our $VERSION = "0.44"; # UR $VERSION;
+our $VERSION = "0.45"; # UR $VERSION;
 
 class UR::Service::RPC::Executer {
     has => [

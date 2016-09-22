@@ -2,6 +2,8 @@ package UR::Role::MethodModifier;
 use strict;
 use warnings;
 
+our $VERSION = "0.45"; # UR $VERSION
+
 use Carp;
 use Sub::Install;
 

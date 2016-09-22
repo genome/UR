@@ -1,6 +1,8 @@
 Revision history for UR
 
 {{$NEXT}}
+
+0.45 2016-09-21T22:48:23Z
         UR now supports Roles.  See the docs in UR::Role.
         -limit and -offset are now handled in the database where possible.
         Added method fatal_message() to the base class.  Acts like

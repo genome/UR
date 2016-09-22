@@ -2,6 +2,8 @@ package UR::Role::MethodModifier::Before;
 use strict;
 use warnings;
 
+our $VERSION = "0.45"; # UR $VERSION;
+
 use UR;
 
 UR::Object::Type->define(
