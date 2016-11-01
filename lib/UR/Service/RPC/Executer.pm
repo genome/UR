@@ -44,7 +44,7 @@ sub create {
 
 # sub classes can override this
 # If they're going to reject the request, $msg should be modified in place
-# with a return value and exception, because we'lre going to return it right back
+# with a return value and exception, because we're going to return it right back
 # to the requester
 sub authenticate {
 #    my($self,$msg) = @_;
