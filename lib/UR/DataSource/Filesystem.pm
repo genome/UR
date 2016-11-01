@@ -1811,7 +1811,7 @@ UR::DataSource::Filesystem - Get and save objects to delimited text files
 
 =head1 DESCRIPTION
 
-A Filesystem data source object represents one or more files on the fileystem.
+A Filesystem data source object represents one or more files on the filesystem.
 In the simplest case, the object's 'path' property names a file that stores
 the data.  
 
@@ -1911,7 +1911,7 @@ print.
 
 =head2 Path specification
 
-Besides refering to just one file on the filesystem, the path spec is a
+Besides referring to just one file on the filesystem, the path spec is a
 recipe for finding files in a directory tree.  If a class using a Filesystem
 data source does not have 'table_name' metadata, then the path specification
 must resolve to file names.  Alternatively, classes may specify their

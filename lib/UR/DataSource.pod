@@ -19,7 +19,7 @@ UR::DataSource - manage the the relationship between objects and a specific stor
 
 =head1 DESCRIPTION
 
-Data source instances represent a logical souce of data to the application.
+Data source instances represent a logical source of data to the application.
 Most of them are likely to be some kind of relational database, but not all
 are.  UR::DataSource is an abstract base class inherited by other data
 sources.

@@ -303,8 +303,8 @@ property name.
   @names = $class_obj->ancestry_property_names
 
 Returns a list of property names of the parent classes and their inheritance
-heirarchy.  The list may include duplicates if a property is overridden
-somewhere in the heirarchy.
+hierarchy.  The list may include duplicates if a property is overridden
+somewhere in the hierarchy.
 
 =item ancestry_property_metas
 
@@ -316,8 +316,8 @@ property name.
 =item all_property_names
 
 Returns a list of property names of the given class and its inheritance
-heirarchy.  The list may include duplicates if a property is overridden
-somewhere in the heirarchy.
+hierarchy.  The list may include duplicates if a property is overridden
+somewhere in the hierarchy.
 
 =item all_property_metas
 
@@ -354,9 +354,9 @@ name.
   @property_objs = $class_obj->all_id_property_metas;
 
 Returns the property names or L<UR::Object::Property> objects for either
-the parent classes and their inheritance heirarchy, or for the given
-class and all of its inheritance heirarchy.  The lists may include duplicates
-if properties are overridden somewhere in the heirarchy.
+the parent classes and their inheritance hierarchy, or for the given
+class and all of its inheritance hierarchy.  The lists may include duplicates
+if properties are overridden somewhere in the hierarchy.
 
 =item unique_property_set_hashref
 
@@ -388,7 +388,7 @@ the given constraint name does not exist.
 
   @names = $class_obj->ancestry_table_names
 
-Returns a list of table names in the class's inheritance heirarchy.
+Returns a list of table names in the class's inheritance hierarchy.
 
 =item direct_column_names
 

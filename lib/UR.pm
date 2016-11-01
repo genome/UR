@@ -798,7 +798,7 @@ for high-throughput genomics.
 
 Copyright (C) 2002-2016 Washington University in St. Louis, MO.
 
-This sofware is licensed under the same terms as Perl itself.
+This software is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.
 
 =pod

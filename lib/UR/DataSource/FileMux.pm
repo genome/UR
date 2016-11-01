@@ -687,7 +687,7 @@ When a get() request is made on the class, the parameter 'thing_type' must be pr
 in the rule, and the value of that parameter is used to complete the file's pathname,
 via the file_resolver() function.  Note that even though the 'thing_type' parameter
 is not actually stored in the file, its value for the loaded objects gets filled in
-because that paremeter exists in the constant_values() configuration list, and in
+because that parameter exists in the constant_values() configuration list, and in
 the get() request.
 
 =head2 Configuration

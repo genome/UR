@@ -104,7 +104,7 @@ sub DESTROY {
 
 =head1 NAME
 
-UR::Context::AutoUnloadPool - Automaticaly unload objects when scope ends
+UR::Context::AutoUnloadPool - Automatically unload objects when scope ends
 
 =head1 SYNOPSIS
 

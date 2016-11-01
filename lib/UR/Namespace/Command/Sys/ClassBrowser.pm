@@ -57,7 +57,7 @@ ur sys class-browser --generate-cache);
 
 sub help_detail {
     q(The class-browser command starts an embedded web server containing an app for
-browsing throught the class structure.  After starting, it prints a URL on
+browsing through the class structure.  After starting, it prints a URL on
 STDOUT that can be copy-and-pasted into a browser to run the app.);
 }
 
@@ -647,7 +647,7 @@ UR::Namespace::Command::Sys::ClassBrowser - WebApp for browsing the class struct
 =head1 DESCRIPTION
 
 The class-browser command starts an embedded web server containing an app for
-browsing throught the class structure.  After starting, it prints a URL on
+browsing through the class structure.  After starting, it prints a URL on
 STDOUT that can be copy-and-pasted into a browser to run the app.
 
 =head1 COMMAND-LINE OPTIONS

@@ -175,7 +175,7 @@ Called when the Server detects data is available to read on its file handle.
 It deserializes the message and calls authenticate.  If authentication fails,
 it immediately passes the message object back to the caller.
 
-If authentication succeedes, it calls the appropriate method in the Executor
+If authentication succeeds, it calls the appropriate method in the Executor
 package, and creates a new Message object with the return value to pass back
 to the caller.
 

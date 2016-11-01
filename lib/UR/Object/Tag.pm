@@ -107,7 +107,7 @@ power over expressed attributes in the app.  In most cases, developers
 will write view components which use attributes, and will ignore
 them rather than plug-in at this low level to augment/mangle/supress.
 
-The filter will be given an object reference and a refrence to an
+The filter will be given an object reference and a reference to an
 array of attributes which are tentatively to be delivered for the
 object.
 

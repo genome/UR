@@ -1311,7 +1311,7 @@ sub _sync_filesystem {
                 $status_message_this_update .= "A " . $class_obj->module_path;
             }
             $class_obj->rewrite_module_header() unless ($no_commit);
-            # FIXME A test of automaticly making DBIx::Class modules
+            # FIXME A test of automatically making DBIx::Class modules
             #$class_obj->dbic_rewrite_module_header() unless ($no_commit);
 
         }

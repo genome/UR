@@ -174,7 +174,7 @@ UR::Role::Param - Role parameters as package variables
 =head1 DESCRIPTION
 
 Roles can be configured by declaring variabls with the C<RoleParam> attribute.
-These variables aquire values by calling C<create()> on the role's name and
+These variables acquire values by calling C<create()> on the role's name and
 giving values for all the role's parameters.  More information about declaring
 and using these parameters is described in the "Parameterized Roles" section of
 L<UR::Role>.

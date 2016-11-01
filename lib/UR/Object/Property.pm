@@ -563,7 +563,7 @@ be both constant and mutable
 =item is_volatile => Boolean
 
 Indicates this property can be changed by a mechanism other than its normal
-accessor method.  Signals are not emmitted even when it does change via
+accessor method.  Signals are not emitted even when it does change via
 its normal accessor method.
 
 =item is_classwide => Boolean
@@ -640,7 +640,7 @@ get its value from.  The default value is the same as property_name
 
 =item where => ARRAY
 
-Supplies additional filters for indirect properies.  For example:
+Supplies additional filters for indirect properties.  For example:
 
   foos => { is => 'Some::Foo', reverse_as => 'some', is_many => 1 },
   blue_foos => { via => 'foos', where => [ color => 'blue' ] },

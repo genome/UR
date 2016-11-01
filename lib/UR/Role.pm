@@ -208,7 +208,7 @@ composed together that overload the same operator unless the composing
 class also overloads that same operator.
 
 An exception is also thrown if composed roles define incompatible 'fallback'
-behavior.  If a role does not specify 'fallback', or explicity sets it to
+behavior.  If a role does not specify 'fallback', or explicitly sets it to
 C<undef>, it is compatible with other values.  A Role that sets its 'fallback'
 value to true or false is only compatible with other roles' values of undef
 or the same true or false value.

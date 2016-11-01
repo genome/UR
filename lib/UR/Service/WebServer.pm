@@ -189,7 +189,7 @@ time before the server is created, usually the first time run() is called.
 =item server
 
 Holds a reference to an object that isa HTTP::Server::PSGI.  This will be
-automaticly created the first time run() is called.
+automatically created the first time run() is called.
 
 =item cb
 
@@ -214,7 +214,7 @@ directory $path.  It returns a CODE ref that takes 2 arguments, $env (the
 standard PSGI env hashref) and $pathname (a path relative to $path).  It
 returns the standard tuple a PSGI server expects.
 
-$pathname is pre-processed by removing all occurances of ".." to keep requests
+$pathname is pre-processed by removing all occurrences of ".." to keep requests
 within the provided $path.  If the requested file is not found, then it
 returns a 404.
 
