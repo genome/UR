@@ -44,7 +44,7 @@ sub create {
 
 # sub classes can override this
 # If they're going to reject the request, $msg should be modified in place
-# with a return value and exception, because we'lre going to return it right back
+# with a return value and exception, because we're going to return it right back
 # to the requester
 sub authenticate {
 #    my($self,$msg) = @_;
@@ -175,7 +175,7 @@ Called when the Server detects data is available to read on its file handle.
 It deserializes the message and calls authenticate.  If authentication fails,
 it immediately passes the message object back to the caller.
 
-If authentication succeedes, it calls the appropriate method in the Executor
+If authentication succeeds, it calls the appropriate method in the Executor
 package, and creates a new Message object with the return value to pass back
 to the caller.
 

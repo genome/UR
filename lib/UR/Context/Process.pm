@@ -4,7 +4,7 @@ package UR::Context::Process;
 
 =head1 NAME
 
-UR::Context::Process - Impliments a generic interface to the current application.
+UR::Context::Process - Implements a generic interface to the current application.
 
 =head1 SYNOPSIS
 
@@ -226,7 +226,7 @@ sub prog_name
 
 This method is used to access and set the GNU-standard package name
 for the package to which this program belongs.  This is does B<NOT>
-refer-to a Perl package.  It allows a set of spefic programs to be
+refer-to a Perl package.  It allows a set of specific programs to be
 grouped together under a common name, which is used in standard
 message output, and is used in the output of the C<version> subroutine
 (see L<"version"> output.

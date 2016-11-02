@@ -3337,7 +3337,7 @@ is interested in.
 
 C<$should_load> is a flag indicating whether the Context should load objects
 satisfying the rule from external data sources.  A true value means it should
-always ask the relevent data sources, even if the Context believes the 
+always ask the relevant data sources, even if the Context believes the
 requested data is in the object cache,  A false but defined value means the
 Context should not ask the data sources for new data, but only return what
 is currently in the cache matching the rule.  The value C<undef> means the
@@ -3379,7 +3379,7 @@ context.  If the current context is a L<UR::Context::Transaction>, then the
 changes will be applied to whatever Context the transaction is a part of.
 if the current context is a L<UR::Context::Process> context, then C<commit()>
 pushes the changes to the underlying L<UR::Context::Root> context, meaning 
-that those changes will be applied to the relevent data sources.
+that those changes will be applied to the relevant data sources.
 
 In the usual case, where no transactions are in play and all data sources
 are RDBMS databases, calling C<commit()> will cause the program to begin
@@ -3615,7 +3615,7 @@ time.
 
 When a request is made that will hit one or more data sources,
 C<_resolve_query_plan_for_ds_and_bxt> is used to call a method of the same name
-on the data source.  It retuns a hashref used by many other parts of the 
+on the data source.  It returns a hashref used by many other parts of the
 object loading system, and describes what data source to use, how to query
 that data source to get the objects, how to use the raw data returned by
 the data source to construct objects and how to resolve any delegated
@@ -3781,7 +3781,7 @@ get() is done on a class that inherits from ParentClass
 
   @objs3 = ChildClass->get(param_1 => 'foo');
 
-again, the first request has already loaded all the relevent data, and
+again, the first request has already loaded all the relevant data, and
 therefore won't query the data source.
 
 =item _sync_databases
@@ -3883,7 +3883,7 @@ class.  Any attempt to interact with the object further will raise an
 exception.
 
 Ghost objects are not included in a get() request on the regular class,
-though the app can ask for them specificly using
+though the app can ask for them specifically using
 C<MyClass::Ghost-E<gt>get(%params)>.
 
 Ghost classes do not have ghost classes themselves.  Calling create() or

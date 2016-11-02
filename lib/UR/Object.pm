@@ -61,7 +61,7 @@ sub copy {
 
 sub __context__ {
     # In UR, a "context" handles inter-object references so they can cross
-    # process boundaries, and interact with persistance systems automatically.
+    # process boundaries, and interact with persistence systems automatically.
 
     # For efficiency, all context switches update a package-level value.
 
@@ -887,7 +887,7 @@ reference represents, using a well-defined interface.
 
 UR uses that separation to automatically handle I/O.  It provides a query API,
 and manages the difference between the state of entities in the application,
-and their state in external persistance systems.  It aims to do so transparently,
+and their state in external persistence systems.  It aims to do so transparently,
 keeping I/O logic orthogonally to "business logic", and hopefully making code
 around I/O unnecessary to write at all for most programs.
 
@@ -1315,7 +1315,7 @@ Useful for test cases.
 
 =head2 Meta API
 
-The folowing methods allow the application to interrogate UR for information
+The following methods allow the application to interrogate UR for information
 about the object in question.
 
 =over 4

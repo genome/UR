@@ -1959,7 +1959,7 @@ updates the $to property on the refered-to object.
 
 Creates a calculated accessor called $accessor_name.  If the $is_constant
 flag is true, then the accessor runs the calculation once, caches the result,
-and returns that result for subseqent calls to the accessor.
+and returns that result for subsequent calls to the accessor.
 
 $calculation_src can be one of: coderef, string containing Perl code, or
 the name of a module under UR::Object::Type::AccessorWriter which has a

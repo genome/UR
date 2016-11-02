@@ -243,12 +243,12 @@ sub context_return {
 
 =head1 C<AUTOLOAD>
 
-This package impliments AUTOLOAD so that derived classes can use
+This package implements AUTOLOAD so that derived classes can use
 AUTOSUB instead of AUTOLOAD.
 
 When a class or object has a method called which is not found in the
 final class or any derived classes, perl checks up the tree for
-AUTOLOAD.  We impliment AUTOLOAD at the top of the tree, and then
+AUTOLOAD.  We implement AUTOLOAD at the top of the tree, and then
 check each class in the tree in order for an AUTOSUB method.  Where a
 class implements AUTOSUB, it will receive a function name as its first
 parameter, and it is expected to return either a subroutine reference,
@@ -264,7 +264,7 @@ Why not use AUTOLOAD directly in place of AUTOSUB?
 On an object with a complex inheritance tree, AUTOLOAD is only found
 once, after which, there is no way to indicate that the given AUTOLOAD
 has failed and that the inheritance tree trek should continue for
-other AUTOLOADS which might impliment the given method.
+other AUTOLOADS which might implement the given method.
 
 Example:
 

@@ -1195,7 +1195,7 @@ their parameters.  If given a boolean expression object directly they will use i
 Otherwise they will construct one from the parameters given.
 
 They have a 1:1 correspondence within the WHERE clause in an SQL statement where
-RDBMS persistance is used.  They also imply the FROM clause in these cases,
+RDBMS persistence is used.  They also imply the FROM clause in these cases,
 since the query properties control which joins must be included to return
 the matching object set.
 
@@ -1335,17 +1335,17 @@ Return the value for the given property
   my $operator = $bx->operator_for('property_name');
 
 Return a string for the operator of the given property.  A value of '' (the
-empty string) means equality ("=").  Other possible values inclue '<', '>',
+empty string) means equality ("=").  Other possible values include '<', '>',
 '<=', '>=', 'between', 'true', 'false', 'in', 'not <', 'not >', etc.
 
 =item normalize
 
     $bx2 = $bx->normalize;
 
-A boolen expression can be changed in incidental ways and still be equivalent.
+A boolean expression can be changed in incidental ways and still be equivalent.
 This method converts the expression into a normalized form so that it can be
 compared to other normalized expressions without incidental differences
-affecting the comparision.
+affecting the comparison.
 
 =item flatten
 
