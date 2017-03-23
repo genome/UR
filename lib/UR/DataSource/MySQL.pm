@@ -39,16 +39,7 @@ sub _format_sql_like_escape_string { return }
 
 sub can_savepoint { 1;} 
 
-sub does_support_limit_offset {
-    my($self, $bx) = @_;
-
-    my $tmpl = $bx->template;
-    if ($tmpl->offset and !defined($tmpl->limit)) {
-        return 0;  # Can't have offset without limit
-    } else {
-        return 1;
-    }
-}
+sub does_support_limit_offset { 0 }
 
 sub resolve_limit_offset_clause {
     my($self, $query_plan) = @_;
