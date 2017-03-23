@@ -12,6 +12,22 @@ UR::Object::Type->define(
 );
 
 # RDBMS API
+sub dbi_data_source_name {
+    my $self = shift->_singleton_object;
+    my $driver  = $self->driver;
+    unless ($driver) {
+        Carp::confess("Cannot resolve a dbi_data_source_name with an undefined driver()");
+    }
+    my $server  = $self->server;
+    unless ($server) {
+        Carp::confess("Cannot resolve a dbi_data_source_name with an undefined server()");
+    }
+    my $database  = $self->database;
+    unless ($database) {
+        Carp::confess("Cannot resolve a dbi_data_source_name with an undefined database()");
+    }
+    sprintf('dbi:%s:host=%s;database=%s', $driver, $server, $database);
+}
 
 sub driver { "mysql" }
 sub database { shift->_singleton_object->database }
