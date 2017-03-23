@@ -14,22 +14,8 @@ UR::Object::Type->define(
 # RDBMS API
 
 sub driver { "mysql" }
-
-#sub server {
-#    my $self = shift->_singleton_object();
-#    $self->_init_database;
-#    return $self->_database_file_path;
-#}
-
+sub database { shift->_singleton_object->database }
 sub owner { shift->_singleton_object->login }
-
-#sub login {
-#    undef
-#}
-#
-#sub auth {
-#    undef
-#}
 
 # MySQL can't do an 'escape' clause with the 'like' operator
 sub _default_sql_like_escape_string { undef };
