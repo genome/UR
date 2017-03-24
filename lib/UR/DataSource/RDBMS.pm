@@ -1598,7 +1598,7 @@ sub create_iterator_closure_for_rule {
     my $order_by_clause = $self->resolve_order_by_clause($query_plan);
 
     my $limit_offset_clause;
-    $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan) if $self->does_support_limit_offset;
+    $limit_offset_clause = $self->resolve_limit_offset_clause($query_plan) if $self->does_support_limit_offset($rule);
 
     my $sql = "\nselect ";
     if ($select_hint) {
