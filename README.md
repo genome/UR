@@ -5,7 +5,7 @@ UR - rich declarative transactional objects
 
 # VERSION
 
-This document describes UR version 0.45
+This document describes UR version 0.46
 
 # SYNOPSIS
 
@@ -325,5 +325,5 @@ for high-throughput genomics.
 
 Copyright (C) 2002-2016 Washington University in St. Louis, MO.
 
-This sofware is licensed under the same terms as Perl itself.
+This software is licensed under the same terms as Perl itself.
 See the LICENSE file in this distribution.
