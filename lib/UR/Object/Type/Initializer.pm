@@ -17,7 +17,7 @@ BEGIN {
     }
 };
 
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.46"; # UR $VERSION;
 
 use Carp ();
 use Sub::Name ();

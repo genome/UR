@@ -43,7 +43,7 @@ a formal UR class.
 require 5.006_000;
 use warnings;
 use strict;
-our $VERSION = "0.45"; # UR $VERSION;;
+our $VERSION = "0.46"; # UR $VERSION;
 
 # set up module
 use Carp;

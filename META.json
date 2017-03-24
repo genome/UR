@@ -105,7 +105,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.45",
+   "version" : "0.46",
    "x_contributors" : [
       "josborne <josborne@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>",
@@ -173,12 +173,12 @@
       "nnutter <nnutter@genome.wustl.edu>",
       "Nathaniel Nutter <iam@nnutter.com>",
       "Eddie Belter <ebelter@genome.wustl.edu>",
-      "Eddie Belter <ebelter@gmail.com>",
       "Jim Eldred <jeldred@genome.wustl.edu>",
       "Yanick Champoux <yanick@babyl.dyndns.org>",
       "Thomas B. Mooney <tmooney@genome.wustl.edu>",
       "Thomas B. Mooney <mooney@wustl.edu>",
+      "Anthony Brummett <abrummet@genome.wustl.edu>",
       "Anthony Brummett <brummett@gmail.com>",
-      "Anthony Brummett <abrummet@genome.wustl.edu>"
+      "Eddie Belter <ebelter@gmail.com>"
    ]
 }
