@@ -78,6 +78,8 @@
             "Template" : "0",
             "Text::Diff" : "0.35",
             "Text::Glob" : "0",
+            "XML::Dumper" : "0",
+            "XML::LibXSLT" : "0",
             "YAML" : "0",
             "perl" : "v5.8.7",
             "version" : "0"
