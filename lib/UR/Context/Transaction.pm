@@ -127,7 +127,7 @@ sub get_changes {
         @changes = UR::Change->get(id => \@changes, @_)
     }
     else {
-        return @changes;
+        return grep { !$_->isa('UR::DeletedRef') } @changes;
     }
 }
 
