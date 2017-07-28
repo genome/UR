@@ -16,7 +16,7 @@ class Command::Crud {
         namespace => { is => 'Text', },
         target_name => { is => 'Text', },
         target_name_pl => { is => 'Text', },
-        subcommand_configs => { is => 'HASH', default_value => {}, },
+        sub_command_configs => { is => 'HASH', default_value => {}, },
     },
     has_calculated => {
         target_name_ub => {
@@ -48,23 +48,33 @@ class Command::Crud {
             calculate => q( $namespace.'::Delete' ),
         },
     },
+    has_transient_optional => {
+        namespace_sub_command_classes => {
+            is => 'Text',
+            is_many => 1,
+        },
+        namespace_sub_command_names => {
+            is => 'Text',
+            is_many => 1,
+        },
+    },
     doc => 'Dynamically build CRUD commands',
 };
 
-#sub buildable_subcommand_names { (qw/ copy create delete list update /) }
-sub subcommand_config_for {
+#sub buildable_sub_command_names { (qw/ copy create delete list update /) }
+sub sub_command_config_for {
     my ($self, $name) = @_;
 
-    $self->fatal_message('No subcommand name given to get config!') if not $name;
+    $self->fatal_message('No sub command name given to get config!') if not $name;
 
-    my $subcommand_configs = $self->subcommand_configs;
-    return if !exists $subcommand_configs->{$name};
+    my $sub_command_configs = $self->sub_command_configs;
+    return if !exists $sub_command_configs->{$name};
 
-    if ( ref($subcommand_configs->{$name}) ne 'HASH' ) {
-        $self->fatal_message('Invalid subcommand config for %s: %s', $name, Data::Dumper::Dumper($subcommand_configs->{$name}));
+    if ( ref($sub_command_configs->{$name}) ne 'HASH' ) {
+        $self->fatal_message('Invalid sub_command_config for %s: %s', $name, Data::Dumper::Dumper($sub_command_configs->{$name}));
     }
 
-    %{$subcommand_configs->{$name}}; # copy hash
+    %{$sub_command_configs->{$name}}; # copy hash
 }
 
 sub create_command_subclasses {
@@ -81,39 +91,57 @@ sub create_command_subclasses {
     my @errors = $self->__errors__;
     $self->fatal_message( join("\n", map { $_->__display_name__ } @errors) ) if @errors;
 
+    $self->_build_command_tree;
+    $self->_get_current_namespace_sub_commands_and_names;
     print Data::Dumper::Dumper($self);
 
     return $self;
     # Get the current sub commands
-    my @namespace_sub_command_classes = $self->namespace->sub_command_classes;
     my @namespace_sub_command_names = $self->namespace->sub_command_names;
-    # FIXME add subcommands
+    # FIXME add sub_commands
     my (@command_names_used, @command_classes);
 
-    $self->_build_command_tree;
     $self->_build_create_command;
     $self->_build_list_command;
     $self->_build_update_command;
     $self->_build_delete_command;
+    $self->_set_namespace_sub_commands_amd_names;
 
-        #*{ $sub_class.'::_display_name_for_value' } = \&display_name_for_value;
+    $self;
+}
 
-    # Overload sub command classes to return these in memory ones, plus the existing ones
-    my @sub_command_classes = List::MoreUtils::uniq @command_classes, @namespace_sub_command_classes;
+sub _get_current_namespace_sub_commands_and_names {
+    my $self = shift;
+    $self->namespace_sub_command_classes([ $self->namespace->sub_command_classes ]);
+    $self->namespace_sub_command_names([ $self->namespace->sub_command_names ]);
+}
+
+sub _add_to_namespace_sub_commands_and_names {
+    my ($self, $sub_command, $name) = @_;
+    my @sub_commands = $self->namespace_sub_command_classes;
+    push @sub_commands, $sub_command;
+    $self->namespace_sub_command_classes(\@sub_commands);
+    my @names = $self->namespace_sub_command_names;
+    push @names, $name;
+    $self->namespace_sub_command_names(\@names);
+}
+
+sub _set_namespace_sub_commands_and_names {
+    my $self = shift;
+
+    my @sub_command_classes = $self->sub_command_classes;
     Sub::Install::install_sub({
         code => sub{ @sub_command_classes },
         into => $self->namespace,
         as => 'sub_command_classes',
         });
 
-    my @sub_command_names = List::MoreUtils::uniq  @command_names_used, @namespace_sub_command_names;
+    my @sub_command_names = $self->sub_command_names;
     Sub::Install::install_sub({
         code => sub{ @sub_command_names },
         into => $self->namespace,
         as => 'sub_command_names',
         });
-
-    $self;
 }
 
 sub _resolve_target_names {
@@ -147,7 +175,7 @@ sub _build_list_command {
     my $list_command_class_name = $self->list_command_class_name;
     return if UR::Object::Type->get($list_command_class_name); # Do not recreate...
 
-    my %config = $self->subcommand_config_for('list');
+    my %config = $self->sub_command_config_for('list');
     return if exists $config{skip}; # Do not create if told not too...
 
     my @has =  (
@@ -180,6 +208,8 @@ sub _build_list_command {
         into => $list_command_class_name,
         as => 'help_brief',
         });
+
+    $self->_add_to_namespace_sub_commands_and_names('list', $list_command_class_name);
 }
 
 sub _build_create_command {
@@ -188,7 +218,7 @@ sub _build_create_command {
     my $create_command_class_name = $self->create_command_class_name;
     return if UR::Object::Type->get($create_command_class_name); # Do not recreate...
 
-    my %config = $self->subcommand_config_for('create');
+    my %config = $self->sub_command_config_for('create');
     return if exists $config{skip}; # Do not create if told not too...
 
     my @exclude = Command::CrudUtil->resolve_incoming_property_names( delete $config{exclude} );
@@ -251,7 +281,7 @@ sub _build_copy_command {
     my $copy_command_class_name = $self->copy_command_class_name;
     return if UR::Object::Type->get($copy_command_class_name);
     
-    my %config = $self->subcommand_config_for('copy');
+    my %config = $self->sub_command_config_for('copy');
     return if exists $config{skip}; # Do not create if told not too...
 
     UR::Object::Type->define(
@@ -267,7 +297,7 @@ sub _build_copy_command {
         },
     );
 
-    #$self->_add_to_created_commands($copy_command_class_name);
+    #$self->_add_to_namespace_sub_commands_and_names($copy_command_class_name, 'copy');
 }
 
 sub _build_update_command {
@@ -276,7 +306,7 @@ sub _build_update_command {
     my $update_command_class_name = $self->update_command_class_name;
     return if UR::Object::Type->get($update_command_class_name);
 
-    my %config = $self->subcommand_config_for('copy');
+    my %config = $self->sub_command_config_for('copy');
     return if exists $config{skip}; # Do not create if told not too...
 
     # Config
@@ -476,7 +506,7 @@ sub _build_delete_command {
     my $delete_command_class_name = $self->delete_command_class_name;
     return if UR::Object::Type->get($self->delete_command_class_name);
 
-    my %config = $self->subcommand_config_for('delete');
+    my %config = $self->sub_command_config_for('delete');
     return if exists $config{skip}; # Do not create if told not too...
 
     UR::Object::Type->define(
