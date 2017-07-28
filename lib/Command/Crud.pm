@@ -3,6 +3,7 @@ package Command::Crud;
 use strict;
 use warnings 'FATAL';
 
+use Command::CrudUtil;
 use Lingua::EN::Inflect;
 use List::MoreUtils;
 use Sub::Install;
@@ -22,7 +23,7 @@ class Command::Crud {
             calculate_from => [qw/ target_name /],
             calculate => q( $target_name =~ s/ /_/g; $target_name; ),
         },
-        target_name_pl_ub => {
+        target_name_ub_pl => {
             calculate_from => [qw/ target_name_pl /],
             calculate => q( $target_name_pl =~ s/ /_/g; $target_name_pl; ),
         },
@@ -67,14 +68,20 @@ sub subcommand_config_for {
 }
 
 sub create_command_subclasses {
-    my $class = shift;
+    my ($class, %params) = @_;
 
-    my $self = $class->create(@_);
+    $class->fatal_message('No target_class given!') if not $params{target_class};
+
+    my $self = $class->create(%params);
     return if not $self;
 
-    $self->fatal_message('No target_class given!') if not $self->target_class;
     $self->namespace( $self->target_class.'::Command' ) if not $self->namespace;
-    $self->resolve_target_names;
+    $self->_resolve_target_names;
+
+    my @errors = $self->__errors__;
+    $self->fatal_message( join("\n", map { $_->__display_name__ } @errors) ) if @errors;
+
+    print Data::Dumper::Dumper($self);
 
     return $self;
     # Get the current sub commands
@@ -109,7 +116,7 @@ sub create_command_subclasses {
     $self;
 }
 
-sub resvole_target_names {
+sub _resolve_target_names {
     my $self = shift;
 
     if ( !$self->target_name ) {
@@ -368,6 +375,7 @@ sub _build_update_command {
 }
 
 sub _build_update_property_sub_command {
+    my $self = shift;
     my ($class, %config) = @_;
 
     my $property = $config{property};
@@ -379,11 +387,11 @@ sub _build_update_property_sub_command {
         class_name => $update_property_class_name,
         is => 'Genome::Command::UpdateProperty',
         has => [
-            $config{target_name_pl_ub} => {
-                is => $config{target_class},
+            $self->target_name_ub_pl => {
+                is => $self->target_class,
                 is_many => 1,
                 shell_args_position => 1,
-                doc => ucfirst($config{target_name_pl}).' to update, resolved via string.',
+                doc => ucfirst($self->target_name_pl).' to update, resolved via string.',
             },
             value => {
                 is => $property->{data_type},
@@ -391,12 +399,12 @@ sub _build_update_property_sub_command {
                 doc => $property->{doc},
             },
         ],
-        doc => 'update '.$config{target_name_pl}.' '.$property->{name},
+        doc => 'update '.$self->target_name_pl.' '.$property->{name},
     );
 
     no strict;
     *{ $update_property_class_name.'::_target_name_pl' } = sub{ return $config{target_name_pl}; };
-    *{ $update_property_class_name.'::_target_name_pl_ub' } = sub{ return $config{target_name_pl_ub}; };
+    *{ $update_property_class_name.'::_target_name_pl_ub' } = sub{ return $config{target_name_ub_pl}; };
     *{ $update_property_class_name.'::_property_name' } = sub{ return $property->{name}; };
     *{ $update_property_class_name.'::_property_doc' } = sub{ return $property->{doc}; } if $property->{doc};
     *{ $update_property_class_name.'::_only_if_null' } = sub{ return $config{only_if_null}; };
@@ -406,6 +414,7 @@ sub _build_update_property_sub_command {
 }
 
 sub _build_add_remove_property_sub_commands {
+    my $self = shift;
     my ($class, %config) = @_;
 
     my $property = $config{property};
@@ -432,12 +441,12 @@ sub _build_add_remove_property_sub_commands {
         UR::Object::Type->define(
             class_name => $update_sub_command_class_name,
             is => 'Genome::Command::AddRemoveProperty',
-            has => [
-                $config{target_name_pl_ub} => {
+            has => {
+                $self->target_name_ub_pl => {
                     is => $config{target_class},
                     is_many => 1,
                     shell_args_position => 1,
-                    doc => ucfirst($config{target_name_pl}).' to update, resolved via string.',
+                    doc => ucfirst($self->target_name_pl).' to update, resolved via string.',
                 },
                 'values' => => {
                     is => $property->{data_type},
@@ -445,14 +454,14 @@ sub _build_add_remove_property_sub_commands {
                     valid_values => $property->{valid_values},
                     doc => $property->{doc},
                 },
-            ],
-            doc => $config{target_name_pl}.' '.$function.' '.$property->{name_pl},
+            },
+            doc => $self->target_name_pl.' '.$function.' '.$property->{name_pl},
         );
         no strict;
         *{$update_sub_command_class_name.'::_add_or_remove'} = sub{ return $function; };
         *{$update_sub_command_class_name.'::_target_name'} = sub{ return $config{target_name}; };
         *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ return $config{target_name_pl}; };
-        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ return $config{target_name_pl_ub}; };
+        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ return $config{target_name_ub_pl}; };
         *{$update_sub_command_class_name.'::_property_name'} = sub{ return $property->{name}; };
         *{$update_sub_command_class_name.'::_property_name_pl'} = sub{ return $property->{name_pl}; };
         *{$update_sub_command_class_name.'::_display_name_for_value'} = \&display_name_for_value;
@@ -474,7 +483,7 @@ sub _build_delete_command {
         class_name => $delete_command_class_name,
         is => 'Genome::Command::Delete',
         has => {
-            $self->target_name_pl_ub => {
+            $self->target_name_ub_pl => {
                 is => $self->target_class,
                 is_many => 1,
                 shell_args_position => 1,
@@ -492,7 +501,7 @@ sub _build_delete_command {
         });
 
     Sub::Install::install_sub({
-        code => sub{ $config{target_name_pl_ub} },
+        code => sub{ $self->target_name_ub_pl },
         into => $delete_command_class_name,
         as => '_target_name_pl_ub',
         });
