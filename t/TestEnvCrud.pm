@@ -93,7 +93,7 @@ class Test::Person {
             doc => 'This person\'s relationships',
         },
         friends => {
-            is => 'Person',
+            is => 'Test::Person',
             is_many => 1,
             is_optional => 1,
             is_mutable => 1,
@@ -103,7 +103,7 @@ class Test::Person {
             doc => 'Friends of this person',
         },
        mom => {
-           is => 'Person',
+           is => 'Test::Person',
            is_optional => 1,
            is_mutable => 1,
            is_many => 0,
@@ -113,7 +113,7 @@ class Test::Person {
            doc => 'The person\'s Mom',
        },
        best_friend => {
-           is => 'Person',
+           is => 'Test::Person',
            is_optional => 1,
            is_mutable => 1,
            is_many => 0,

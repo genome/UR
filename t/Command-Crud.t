@@ -60,7 +60,7 @@ subtest 'target names' => sub{
 };
 
 subtest 'commands' => sub{
-    plan tests => 12;
+    plan tests => 16;
 
     for ( @{$test{sub_command_names}} ) {
         my $method = $_.'_command_class_name';
@@ -72,6 +72,21 @@ subtest 'commands' => sub{
     is_deeply([sort $test{crud}->namespace_sub_command_names], [sort @{$test{sub_command_names}}], 'namespace_sub_command_names');
     my @namespace_sub_command_classes = map { my $m = $_.'_command_class_name'; $test{crud}->$m($_); } @{$test{sub_command_names}};
     is_deeply([sort $test{crud}->namespace_sub_command_classes], [sort @namespace_sub_command_classes], 'namespace_sub_command_classes');
+
+    my @property_names = sort (qw/ name title has_pets job friends mom best_friend /);
+    my $update_class = join('::', $test{namespace}, 'Update');
+    my @expected_sub_command_classes = map { my $p = $_; join('::', $update_class, join('', map { ucfirst } split(/_/, ucfirst($_)))) } @property_names;
+    is_deeply([$update_class->sub_command_classes], \@expected_sub_command_classes, 'update property sub command classes');
+    my @existing_sub_commands = map { UR::Object::Type->get($_) } @expected_sub_command_classes;
+    is(@existing_sub_commands, @expected_sub_command_classes, 'expected sub commands exist');
+
+    for my $name (qw/ friends / ) {
+        for my $type (qw/ Add Remove /) {
+            my $update_property_tree_class = join('::', $update_class, join('', map { ucfirst } split(/_/, $name)), $type);
+            my $sub_command = UR::Object::Type->get($update_property_tree_class);
+            ok($sub_command, "$update_property_tree_class exists");
+        }
+    }
 
 };
 

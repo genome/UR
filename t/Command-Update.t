@@ -7,5 +7,5 @@ use TestEnvCrud;
 
 use Test::More tests => 1;
 
-use_ok('Genome::Command::UpdateProperty') or die;
+use_ok('Command::Update') or die;
 done_testing();

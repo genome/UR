@@ -104,7 +104,7 @@ sub create_command_subclasses {
     $self->_build_copy_command;
     $self->_build_create_command;
     $self->_build_list_command;
-    #$self->_build_update_command;
+    $self->_build_update_command;
     $self->_build_delete_command;
     $self->_set_namespace_sub_commands_and_names;
 
@@ -310,19 +310,24 @@ sub _build_update_command {
     return if exists $config{skip}; # Do not create if told not too...
 
     # Config
+    # target meta and properties
+    my $target_meta = $self->target_class->__meta__;
+    my @properties = $target_meta->property_metas;
+
     # include only these properties
     my @include_only = Command::CrudUtil->resolve_incoming_property_names( delete $config{include_only} );
     my @exclude = Command::CrudUtil->resolve_incoming_property_names( delete $config{exclude} );
     if ( @include_only and @exclude ) {
         $self->fatal_message('Cannot include only and exclude update sub commands!');
     }
+    # TODO validate property names?
 
     # only if null
-    my (%only_if_null, $all_only_if_null);
+    my %only_if_null;
     if ( my $only_if_null = delete $config{only_if_null} ) {
         my $ref = ref $only_if_null;
         if ( $only_if_null eq 1 ) {
-            $all_only_if_null = 1;
+            %only_if_null = map { $_->property_name => 1 } @properties;
         }
         elsif ( not $ref ) {
             Carp::confess("Unknown 'only_if_null' config: $only_if_null");
@@ -350,7 +355,6 @@ sub _build_update_command {
     }
 
     # Properties make a command for each
-    my $target_meta = $self->target_class->__meta__;
     my %properties_seen;
     PROPERTY: for my $target_property ( $target_meta->property_metas ) {
         my $property_name = $target_property->property_name;
@@ -389,10 +393,10 @@ sub _build_update_command {
         $properties_seen{$property_name} = 1;
 
         $config{property} = \%property;
-        $config{only_if_null} = ( $all_only_if_null or exists $only_if_null{$property_name} ) ? 1 : 0;
+        $config{only_if_null} = ( exists $only_if_null{$property_name} ) ? 1 : 0;
         my $update_sub_command;
         if ( $property{is_many} ) {
-            $update_sub_command = $self->_build_add_remove_property_sub_commands(%config);
+            $update_sub_command = $self->_build_update_add_remove_property_sub_commands(%config);
         }
         else {
             $update_sub_command = $self->_build_update_property_sub_command(%config);
@@ -410,8 +414,7 @@ sub _build_update_command {
 }
 
 sub _build_update_property_sub_command {
-    my $self = shift;
-    my ($class, %config) = @_;
+    my ($self, %config) = @_;
 
     my $property = $config{property};
     my $update_property_class_name = join('::', $self->update_command_class_name, join('', map { ucfirst } split('_', $property->{name})));
@@ -447,14 +450,13 @@ sub _build_update_property_sub_command {
     $update_property_class_name;
 }
 
-sub _build_add_remove_property_sub_commands {
-    my $self = shift;
-    my ($class, %config) = @_;
+sub _build_update_add_remove_property_sub_commands {
+    my ($self, %config) = @_;
 
     my $property = $config{property};
-    my $update_tree_class_name = $config{namespace}.'::Update::'.join('', map { ucfirst } split('_', $property->{name_pl}));
+    my $tree_class_name = $self->namespace.'::Update::'.join('', map { ucfirst } split('_', $property->{name_pl}));
     UR::Object::Type->define(
-        class_name => $update_tree_class_name,
+        class_name => $tree_class_name,
         is => 'Command::Tree',
         doc => 'add/remove '.$property->{name_pl},
     );
@@ -466,14 +468,14 @@ sub _build_add_remove_property_sub_commands {
     *{$update_tree_class_name.'::_property_name'} = sub{ return $property->{name}; };
     *{$update_tree_class_name.'::_property_name_pl'} = sub{ return $property->{name_pl}; };
     *{$update_tree_class_name.'::_display_name_for_value'} = \&display_name_for_value;
-    *{$update_tree_class_name.'::sub_command_classes'} = sub{ return @update_sub_command_class_names; };
+    *{$update_tree_class_name.'::sub_command_classes'} = sub{ @update_sub_command_class_names; };
     use strict;
 
     for my $function (qw/ add remove /) {
-        my $update_sub_command_class_name = $update_tree_class_name.'::'.ucfirst($function);
-        push @update_sub_command_class_names, $update_sub_command_class_name;
+        my $sub_command_class_name = $tree_class_name.'::'.ucfirst($function);
+        push @update_sub_command_class_names, $sub_command_class_name;
         UR::Object::Type->define(
-            class_name => $update_sub_command_class_name,
+            class_name => $sub_command_class_name,
             is => 'Command::UpdateIsMany',
             has => {
                 $self->target_name_ub_pl => {
@@ -492,16 +494,16 @@ sub _build_add_remove_property_sub_commands {
             doc => $self->target_name_pl.' '.$function.' '.$property->{name_pl},
         );
         no strict;
-        *{$update_sub_command_class_name.'::_add_or_remove'} = sub{ return $function; };
-        *{$update_sub_command_class_name.'::_target_name'} = sub{ return $config{target_name}; };
-        *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ return $config{target_name_pl}; };
-        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ return $config{target_name_ub_pl}; };
-        *{$update_sub_command_class_name.'::_property_name'} = sub{ return $property->{name}; };
-        *{$update_sub_command_class_name.'::_property_name_pl'} = sub{ return $property->{name_pl}; };
+        *{$update_sub_command_class_name.'::_add_or_remove'} = sub{ $function; };
+        *{$update_sub_command_class_name.'::_target_name'} = sub{ $config{target_name}; };
+        *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ $config{target_name_pl}; };
+        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ $config{target_name_ub_pl}; };
+        *{$update_sub_command_class_name.'::_property_name'} = sub{ $property->{name}; };
+        *{$update_sub_command_class_name.'::_property_name_pl'} = sub{ $property->{name_pl}; };
         *{$update_sub_command_class_name.'::_display_name_for_value'} = \&display_name_for_value;
     }
 
-    $update_tree_class_name;
+    $tree_class_name;
 }
 
 sub _build_delete_command {
