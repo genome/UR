@@ -3,7 +3,7 @@
 use strict;
 use warnings 'FATAL';
 
-use TestEnv;
+use TestEnvCrud;
 
 use Test::Exception;
 use Test::More tests => 4;

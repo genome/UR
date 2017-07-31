@@ -6,7 +6,7 @@ use warnings 'FATAL';
 use Path::Class;
 use Test::More tests => 3;
 
-use TestEnv;
+use TestEnvCrud;
 
 subtest 'paths' => sub{
     plan tests => 4;

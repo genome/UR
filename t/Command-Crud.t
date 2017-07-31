@@ -59,13 +59,19 @@ subtest 'target names' => sub{
 
 };
 
-subtest 'command class names' => sub{
-    plan tests => 5;
+subtest 'commands' => sub{
+    plan tests => 12;
 
-    for (qw/ copy create delete list update /) {
+    for ( @{$test{sub_command_names}} ) {
         my $method = $_.'_command_class_name';
-        is($test{crud}->$method, $test{namespace}.'::'.ucfirst($_), "$_ subcommand class name");
+        my $class_name = $test{crud}->$method;
+        is($class_name, $test{namespace}.'::'.ucfirst($_), "$_ subcommand class name");
+        lives_ok(sub { $class_name->__meta__; }, "$_ comand was created"); # will unit test individual commands
     }
+
+    is_deeply([sort $test{crud}->namespace_sub_command_names], [sort @{$test{sub_command_names}}], 'namespace_sub_command_names');
+    my @namespace_sub_command_classes = map { my $m = $_.'_command_class_name'; $test{crud}->$m($_); } @{$test{sub_command_names}};
+    is_deeply([sort $test{crud}->namespace_sub_command_classes], [sort @namespace_sub_command_classes], 'namespace_sub_command_classes');
 
 };
 

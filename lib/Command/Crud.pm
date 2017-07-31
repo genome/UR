@@ -3,6 +3,13 @@ package Command::Crud;
 use strict;
 use warnings 'FATAL';
 
+use Command::Create;
+use Command::Copy;
+use Command::Delete;
+use Command::Update;
+use Command::UpdateTree;
+use Command::UpdateIsMany;
+use UR::Object::Command::List;
 use Command::CrudUtil;
 use Lingua::EN::Inflect;
 use List::MoreUtils;
@@ -93,19 +100,13 @@ sub create_command_subclasses {
 
     $self->_build_command_tree;
     $self->_get_current_namespace_sub_commands_and_names;
-    print Data::Dumper::Dumper($self);
 
-    return $self;
-    # Get the current sub commands
-    my @namespace_sub_command_names = $self->namespace->sub_command_names;
-    # FIXME add sub_commands
-    my (@command_names_used, @command_classes);
-
+    $self->_build_copy_command;
     $self->_build_create_command;
     $self->_build_list_command;
-    $self->_build_update_command;
+    #$self->_build_update_command;
     $self->_build_delete_command;
-    $self->_set_namespace_sub_commands_amd_names;
+    $self->_set_namespace_sub_commands_and_names;
 
     $self;
 }
@@ -129,15 +130,15 @@ sub _add_to_namespace_sub_commands_and_names {
 sub _set_namespace_sub_commands_and_names {
     my $self = shift;
 
-    my @sub_command_classes = $self->sub_command_classes;
-    Sub::Install::install_sub({
+    my @sub_command_classes = $self->namespace_sub_command_classes;
+    Sub::Install::reinstall_sub({
         code => sub{ @sub_command_classes },
         into => $self->namespace,
         as => 'sub_command_classes',
         });
 
-    my @sub_command_names = $self->sub_command_names;
-    Sub::Install::install_sub({
+    my @sub_command_names = $self->namespace_sub_command_names;
+    Sub::Install::reinstall_sub({
         code => sub{ @sub_command_names },
         into => $self->namespace,
         as => 'sub_command_names',
@@ -209,7 +210,7 @@ sub _build_list_command {
         as => 'help_brief',
         });
 
-    $self->_add_to_namespace_sub_commands_and_names('list', $list_command_class_name);
+    $self->_add_to_namespace_sub_commands_and_names($list_command_class_name, 'list');
 }
 
 sub _build_create_command {
@@ -273,6 +274,8 @@ sub _build_create_command {
     *{$create_command_class_name.'::_target_class'} = sub{ return $config{target_class}; };
     *{$create_command_class_name.'::_target_name'} = sub{ return $config{target_name}; };
     *{$create_command_class_name.'::_before'} = $config{before} if $config{before};
+
+    $self->_add_to_namespace_sub_commands_and_names($create_command_class_name, 'create');
 }
 
 sub _build_copy_command {
@@ -286,7 +289,7 @@ sub _build_copy_command {
 
     UR::Object::Type->define(
         class_name => $copy_command_class_name,
-        is => 'Genome::Command::Copy',
+        is => 'Command::Copy',
         doc => sprintf('copy a %s', $self->target_name),
         has => {
             source => {
@@ -297,16 +300,13 @@ sub _build_copy_command {
         },
     );
 
-    #$self->_add_to_namespace_sub_commands_and_names($copy_command_class_name, 'copy');
+    $self->_add_to_namespace_sub_commands_and_names($copy_command_class_name, 'copy');
 }
 
 sub _build_update_command {
     my $self = shift;
 
-    my $update_command_class_name = $self->update_command_class_name;
-    return if UR::Object::Type->get($update_command_class_name);
-
-    my %config = $self->sub_command_config_for('copy');
+    my %config = $self->sub_command_config_for('update');
     return if exists $config{skip}; # Do not create if told not too...
 
     # Config
@@ -332,13 +332,15 @@ sub _build_update_command {
         }
     }
 
-    # Update tree
-    my $update_meta = $update_command_class_name->__meta__;
+    # Update Tree
+    my $update_command_class_name = $self->update_command_class_name;
+    my $update_meta = UR::Object::Type->get($update_command_class_name);
+
     my (@update_sub_commands, @update_sub_command_names);
     if ( not $update_meta ) {
         UR::Object::Type->define(
             class_name => $update_command_class_name,
-            is => 'Genome::Command::UpdateTree',
+            is => 'Command::UpdateTree',
             doc => 'properties on '.$self->target_name_pl,
         );
     }
@@ -398,10 +400,13 @@ sub _build_update_command {
         push @update_sub_commands, $update_sub_command if $update_sub_command;
     }
 
-    no strict;
-    *{$update_class_name.'::sub_command_classes'} = sub{ return @update_sub_commands; };
+    Sub::Install::reinstall_sub({
+        code => sub{ @update_sub_commands },
+        into => $update_command_class_name,
+        as => 'sub_command_classes',
+        });
 
-    $update_class_name;
+    $self->_add_to_namespace_sub_commands_and_names($update_command_class_name, 'update');
 }
 
 sub _build_update_property_sub_command {
@@ -409,14 +414,13 @@ sub _build_update_property_sub_command {
     my ($class, %config) = @_;
 
     my $property = $config{property};
-    my $update_property_class_name = $config{namespace}.'::Update::'.join('', map { ucfirst } split('_', $property->{name}));
-    my $update_property_class = eval{ $update_property_class_name->class; };
-    return if $update_property_class; # OK
+    my $update_property_class_name = join('::', $self->update_command_class_name, join('', map { ucfirst } split('_', $property->{name})));
+    return if UR::Object::Type->get($update_property_class_name);
 
     UR::Object::Type->define(
         class_name => $update_property_class_name,
-        is => 'Genome::Command::UpdateProperty',
-        has => [
+        is => 'Command::Update',
+        has => {
             $self->target_name_ub_pl => {
                 is => $self->target_class,
                 is_many => 1,
@@ -428,19 +432,19 @@ sub _build_update_property_sub_command {
                 valid_values => $property->{valid_values},
                 doc => $property->{doc},
             },
-        ],
+        },
         doc => 'update '.$self->target_name_pl.' '.$property->{name},
     );
 
     no strict;
-    *{ $update_property_class_name.'::_target_name_pl' } = sub{ return $config{target_name_pl}; };
-    *{ $update_property_class_name.'::_target_name_pl_ub' } = sub{ return $config{target_name_ub_pl}; };
+    *{ $update_property_class_name.'::_target_name_pl' } = sub{ return $self->target_name_pl; };
+    *{ $update_property_class_name.'::_target_name_pl_ub' } = sub{ return $self->target_name_ub_pl; };
     *{ $update_property_class_name.'::_property_name' } = sub{ return $property->{name}; };
     *{ $update_property_class_name.'::_property_doc' } = sub{ return $property->{doc}; } if $property->{doc};
     *{ $update_property_class_name.'::_only_if_null' } = sub{ return $config{only_if_null}; };
     *{ $update_property_class_name.'::_display_name_for_value' } = \&display_name_for_value;
 
-    return $update_property_class_name;
+    $update_property_class_name;
 }
 
 sub _build_add_remove_property_sub_commands {
@@ -470,7 +474,7 @@ sub _build_add_remove_property_sub_commands {
         push @update_sub_command_class_names, $update_sub_command_class_name;
         UR::Object::Type->define(
             class_name => $update_sub_command_class_name,
-            is => 'Genome::Command::AddRemoveProperty',
+            is => 'Command::UpdateIsMany',
             has => {
                 $self->target_name_ub_pl => {
                     is => $config{target_class},
@@ -497,7 +501,7 @@ sub _build_add_remove_property_sub_commands {
         *{$update_sub_command_class_name.'::_display_name_for_value'} = \&display_name_for_value;
     }
 
-    return $update_tree_class_name;
+    $update_tree_class_name;
 }
 
 sub _build_delete_command {
@@ -511,7 +515,7 @@ sub _build_delete_command {
 
     UR::Object::Type->define(
         class_name => $delete_command_class_name,
-        is => 'Genome::Command::Delete',
+        is => 'Command::Delete',
         has => {
             $self->target_name_ub_pl => {
                 is => $self->target_class,
@@ -535,7 +539,8 @@ sub _build_delete_command {
         into => $delete_command_class_name,
         as => '_target_name_pl_ub',
         });
-    $delete_command_class_name;
+
+    $self->_add_to_namespace_sub_commands_and_names($delete_command_class_name, 'delete');
 }
 
 1;
