@@ -68,7 +68,8 @@ class Command::Crud {
     doc => 'Dynamically build CRUD commands',
 };
 
-#sub buildable_sub_command_names { (qw/ copy create delete list update /) }
+sub buildable_sub_command_names { (qw/ copy create delete list update /) }
+
 sub sub_command_config_for {
     my ($self, $name) = @_;
 

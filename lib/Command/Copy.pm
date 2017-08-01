@@ -8,26 +8,29 @@ use Try::Tiny qw(try catch);
 class Command::Copy {
     is => 'Command::V2',
     is_abstract => 1,
-    has => [
+    has => {
         source => {
             is => 'UR::Object',
+            shell_args_position => 1,
         },
         changes => {
             is => 'Text',
             is_many => 1,
-            doc => 'comma-separated list of changes',
+            doc => 'A name/value comma-separated list of changes',
         },
-    ],
+    },
 };
 
 sub help_detail {
-    return join('',
-        q(Any non-delegated, non-ID properties may be specified with an operator and a value.),
-        q( Valid operators are '=', '+=', '-=', and '.='; function is same as in Perl.),
-        qq(\n\nFor example:\n\n),
-        qq(   --changes "name.=-RT101912,foo=bar"\n\n),
-        q( A value of 'undef' may be used to pass a Perl undef as the value.  Either `foo=` or `foo=''` can be used to set the value to an empty string.),
-    );
+<<HELP;
+    Any non-delegated, non-ID properties may be specified with an operator and a value.
+
+    Valid operators are '=', '+=', '-=', and '.='; function is same as in Perl.
+    Example:
+    --changes "name.=-RT101912,foo=bar"\n\n),
+
+    A value of 'undef' may be used to pass a Perl undef as the value.  Either `foo=` or `foo=''` can be used to set the value to an empty string.
+HELP
 }
 
 sub execute {
@@ -41,13 +44,10 @@ sub execute {
 
         for my $change ($self->changes) {
             my ($key, $op, $value) = $change =~ /^(.+?)(=|\+=|\-=|\.=)(.*)$/;
-            unless ($key && $op) {
-                die $self->error_message("invalid change: $change");
-            }
+            die ("Invalid change: $change") unless $key && $op;
+            die sprintf('Invalid property %s for %s', $key, $copy->__display_name__) if !$copy->can($key);
 
-            if ($value eq 'undef') {
-                $value = undef;
-            }
+            $value = undef if $value =~ /^undef$/i;
 
             if ($op eq '=') {
                 $copy->$key($value);
@@ -63,26 +63,19 @@ sub execute {
             }
         }
 
-        unless ($tx->commit) {
-            die 'commit failed';
-        }
-
-        return $copy;
+        die 'Failed to commit!' if !$tx->commit;
+        $copy;
     }
     catch {
-        $tx->rollback();
-        $error = $_ || 'unknown error';
+        $tx->rollback;
+        $error = $_ || 'Unknown error';
         return;
     };
 
-    if ($copy) {
-        $self->status_message('Created new %s with ID %s', $copy->class, $copy->id);
-        return 1;
-    }
-    else {
-        $self->error_message('Failed to create new %s: %s', $self->source->class, $error);
-        return;
-    }
+    $self->fatal_message('Failed to create new %s: %s', $self->source->class, $error) if !$copy;
+
+    $self->status_message('Created new %s with ID %s', $copy->class, $copy->id);
+    1;
 }
 
 1;

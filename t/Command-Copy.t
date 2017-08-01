@@ -5,65 +5,57 @@ use warnings 'FATAL';
 
 use TestEnvCrud;
 
-use Test::More tests => 5;
-use Test::Deep qw(cmp_bag);
+use Test::Exception;
+use Test::More tests => 3;
 
-use_ok('Command::Copy') or die;
+my %test;
+subtest 'setup' => sub{
+    plan tests => 5;
 
-UR::Object::Type->define(
-    class_name => 'Sports::Player',
-    has => [
-        name => { is => 'Text' },
-    ],
-    has_optional => [
-        team_id => { is => 'Text' },
-        team => {
-            is => 'Sports::Team',
-            id_by => 'team_id',
-        },
-    ],
-);
+    use_ok('Command::Copy') or die;
+    use_ok('Command::Crud') or die;
 
-UR::Object::Type->define(
-    class_name => 'Sports::Team',
-    has => [
-        name => {
-            is => 'Text',
-        },
-    ],
-    has_optional => [
-        players => {
-            is => 'Sports::Player',
-            is_many => 1,
-            reverse_as => 'team',
-        },
-    ],
-);
-
-UR::Object::Type->define(
-    class_name => 'Sports::Team::Command::Copy',
-    is => 'Command::Copy',
-);
-
-my $lakers = Sports::Team->create(name => 'Lakers');
-my $mj = Sports::Player->create(team_id => $lakers->id, name => 'Magic Johnson');
-
-{
-    my $cmd = Sports::Team::Command::Copy->create(
-        source => $lakers,
-        changes => ['name+=II'],
+    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'copy' } Command::Crud->buildable_sub_command_names;
+    Command::Crud->create_command_subclasses(
+        target_class => 'Test::Person',
+        sub_command_configs => \%sub_command_configs,
     );
-    ok(!$cmd->execute, 'command failed when trying to += Text');
+
+    $test{cmd} = 'Test::Person::Command::Copy';
+    ok(UR::Object::Type->get($test{cmd}), 'person copy command exists'),
+
+    $test{person} = Test::Person->create(
+        name => 'Moe',
+        title => 'mr',
+        has_pets => 'yes',
+    );
+    ok($test{person}, 'create test person');
+    ok(UR::Context->commit, 'commit');
+
 };
 
+subtest 'fails' => sub{
+    plan tests => 4;
 
-Sports::Team::Command::Copy->dump_status_messages(0);
-Sports::Team::Command::Copy->execute(
-    source => $lakers,
-    changes => ['name.=II'],
-);
-my $lakersII = Sports::Team->get(name => $lakers->name . 'II');
-ok($lakersII, 'copied team with appended name');
+    throws_ok(sub{ $test{cmd}->execute(source => $test{person}, changes => [ "= Slow" ]); }, qr/Invalid change/, 'fails w/ invalid change');
+    throws_ok(sub{ $test{cmd}->execute(source => $test{person}, changes => [ "names.= Slow" ]); }, qr/Invalid property/, 'fails w/ invalid property');
+    throws_ok(sub{ $test{cmd}->execute(source => $test{person}, changes => [ "name.= Slow", "has_pets=dunno" ]); }, qr/Failed to commit/, 'fails w/ invalid has_pets');
+    ok(!Test::Person->get(name => 'More Slow'), 'did not create person w/ invalid has_pets;');
 
-cmp_bag([$lakersII->players], [], 'lakersII have no players');
-cmp_bag([$lakers->players], [$mj], 'lakers have correct players');
+};
+
+subtest 'copy' => sub{
+    plan tests => 5;
+
+    lives_ok(sub{ $test{cmd}->execute(source => $test{person}, changes => [ "name.= Slow", "has_pets=no" ]); }, 'copy');
+
+    my $new_person = Test::Person->get(name => 'Moe Slow');
+    ok($new_person, 'created new person');
+    is($new_person->title, 'mr', 'title is the same');
+    is($new_person->has_pets, 'no', 'changed has_pets');
+
+    ok(UR::Context->commit, 'commit');
+
+};
+
+done_testing();
