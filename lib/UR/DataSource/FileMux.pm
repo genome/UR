@@ -748,7 +748,7 @@ UR::DataSource::FilMux hooks into that infrastructure by implementing
 create_iterator_closure_for_rule().  It first collects the values for all the
 parameters mentioned in required_for_get() by passing the rule and needed
 parameter to infer_property_value_from_rule() of the current Context.  If any
-of the needed parameters is not resolvable, an excpetion is raised.
+of the needed parameters is not resolvable, an exception is raised.
 
 Some of the rule's parameters may have multiple values.  In those cases, all the 
 combinations of values are expanded.  For example of param_a has 2 values, and
