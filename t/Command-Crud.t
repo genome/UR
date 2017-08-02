@@ -47,15 +47,14 @@ subtest 'create_command_subclasses' => sub{
 
 };
 
-subtest 'target names' => sub{
-    plan tests => 5;
+subtest 'crud and namespace target names' => sub{
+    plan tests => 12;
 
     my $crud = $test{crud};
-    is($crud->namespace, $test{namespace}, 'namespace');
-    is($crud->target_name, $test{target_name}, 'target_name');
-    is($crud->target_name_pl, $test{target_name_pl}, 'target_name_pl');
-    is($crud->target_name_ub, $test{target_name_ub}, 'target_name_ub');
-    is($crud->target_name_ub_pl, $test{target_name_ub_pl}, 'target_name_ub_pl');
+    for my $property (qw/ namespace target_class target_name target_name_pl target_name_ub target_name_ub_pl /) {
+        is($test{crud}->$property, $test{$property}, "CRUD $property");
+        is($test{namespace}->$property, $test{$property}, "$test{namespace} $property");
+    }
 
 };
 

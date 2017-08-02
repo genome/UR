@@ -169,6 +169,14 @@ sub _build_command_tree {
         is => 'Command::Tree',
         doc => 'work with '.$self->target_name_pl,
     );
+
+    for my $property (qw/ namespace target_class target_name target_name_pl target_name_ub target_name_ub_pl /) {
+        Sub::Install::install_sub({
+            code => sub{ $self->$property },
+            into => $self->namespace,
+            as => $property,
+            });
+    }
 }
 
 sub _build_list_command {
