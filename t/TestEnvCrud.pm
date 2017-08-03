@@ -57,7 +57,7 @@ class Test::Relationship {
         name => { is => 'Text', },
     },
     has => {
-        tester => { is => 'Test::Person', id_by => 'person_id', },
+        person => { is => 'Test::Person', id_by => 'person_id', },
         related => { is => 'Test::Person', id_by => 'related_id' },
     },
 };
@@ -124,6 +124,6 @@ class Test::Person {
        },
     },
 };
-sub Person::__display_name__ { $_[0]->name }
+sub Test::Person::__display_name__ { $_[0]->name }
 
 1;
