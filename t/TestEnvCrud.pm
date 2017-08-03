@@ -68,8 +68,8 @@ class Test::Person {
         name => { is => 'Text', doc => 'Name of the tester', },
         title => {
             is => 'Text',
+            is_optional => 1,
             valid_values => [qw/ mr sir mrs ms miss dr /],
-            default_value => 'mr',
             doc => 'Title',
         },
         has_pets => {

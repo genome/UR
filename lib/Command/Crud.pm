@@ -232,7 +232,7 @@ sub _build_create_command {
     return if exists $config{skip}; # Do not create if told not too...
 
     my @exclude = Command::CrudUtil->resolve_incoming_property_names( delete $config{exclude} );
-    $self->fatal_message('Unknown config for LIST: %s', Data::Dumper::Dumper(\%config)) if %config;
+    $self->fatal_message('Unknown config for CREATE %s', Data::Dumper::Dumper(\%config)) if %config;
 
     my $target_meta = $self->target_class->__meta__;
     my %properties;
@@ -362,7 +362,7 @@ sub _build_update_command {
         @update_sub_command_names = $update_command_class_name->sub_command_names;
     }
 
-    # Properties make a command for each
+    # Properties: make a command for each
     my %properties_seen;
     PROPERTY: for my $target_property ( $target_meta->property_metas ) {
         my $property_name = $target_property->property_name;
@@ -384,6 +384,7 @@ sub _build_update_command {
             doc => $target_property->doc,
         );
         $property{valid_values} = $target_property->valid_values if defined $target_property->valid_values;
+        $property{only_if_null} = ( exists $only_if_null{$property_name} ) ? 1 : 0;
 
         if ( $property_name =~ s/_id(s)?$// ) {
             $property_name .= $1 if $1;
@@ -400,14 +401,12 @@ sub _build_update_command {
         next if $properties_seen{$property_name};
         $properties_seen{$property_name} = 1;
 
-        $config{property} = \%property;
-        $config{only_if_null} = ( exists $only_if_null{$property_name} ) ? 1 : 0;
         my $update_sub_command;
         if ( $property{is_many} ) {
-            $update_sub_command = $self->_build_update_add_remove_property_sub_commands(%config);
+            $update_sub_command = $self->_build_update_add_remove_property_sub_commands(\%property);
         }
         else {
-            $update_sub_command = $self->_build_update_property_sub_command(%config);
+            $update_sub_command = $self->_build_update_property_sub_command(\%property);
         }
         push @update_sub_commands, $update_sub_command if $update_sub_command;
     }
@@ -422,9 +421,8 @@ sub _build_update_command {
 }
 
 sub _build_update_property_sub_command {
-    my ($self, %config) = @_;
+    my ($self, $property) = @_;
 
-    my $property = $config{property};
     my $update_property_class_name = join('::', $self->update_command_class_name, join('', map { ucfirst } split('_', $property->{name})));
     return if UR::Object::Type->get($update_property_class_name);
 
@@ -444,24 +442,20 @@ sub _build_update_property_sub_command {
                 doc => $property->{doc},
             },
         },
-        doc => 'update '.$self->target_name_pl.' '.$property->{name},
+        has_constant_transient => {
+            namespace => { value => $self->namespace, },
+            property_name => { value => $property->{name}, },
+            only_if_null => { value => $property->{only_if_null}, },
+        },
+        doc => sprintf('update %s %s', $self->target_name_pl, $property->{name}),
     );
-
-    no strict;
-    *{ $update_property_class_name.'::_target_name_pl' } = sub{ return $self->target_name_pl; };
-    *{ $update_property_class_name.'::_target_name_pl_ub' } = sub{ return $self->target_name_ub_pl; };
-    *{ $update_property_class_name.'::_property_name' } = sub{ return $property->{name}; };
-    *{ $update_property_class_name.'::_property_doc' } = sub{ return $property->{doc}; } if $property->{doc};
-    *{ $update_property_class_name.'::_only_if_null' } = sub{ return $config{only_if_null}; };
-    *{ $update_property_class_name.'::_display_name_for_value' } = \&display_name_for_value;
 
     $update_property_class_name;
 }
 
 sub _build_update_add_remove_property_sub_commands {
-    my ($self, %config) = @_;
+    my ($self, $property) = @_;
 
-    my $property = $config{property};
     my $tree_class_name = $self->namespace.'::Update::'.join('', map { ucfirst } split('_', $property->{name_pl}));
     UR::Object::Type->define(
         class_name => $tree_class_name,
@@ -487,7 +481,7 @@ sub _build_update_add_remove_property_sub_commands {
             is => 'Command::UpdateIsMany',
             has => {
                 $self->target_name_ub_pl => {
-                    is => $config{target_class},
+                    is => $self->target_class,
                     is_many => 1,
                     shell_args_position => 1,
                     doc => ucfirst($self->target_name_pl).' to update, resolved via string.',
@@ -499,16 +493,17 @@ sub _build_update_add_remove_property_sub_commands {
                     doc => $property->{doc},
                 },
             },
+            #has_constant_transient => {
+            #},
             doc => $self->target_name_pl.' '.$function.' '.$property->{name_pl},
         );
         no strict;
         *{$update_sub_command_class_name.'::_add_or_remove'} = sub{ $function; };
-        *{$update_sub_command_class_name.'::_target_name'} = sub{ $config{target_name}; };
-        *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ $config{target_name_pl}; };
-        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ $config{target_name_ub_pl}; };
+        *{$update_sub_command_class_name.'::_target_name'} = sub{ $self->target_name; };
+        *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ $self->target_name_pl; };
+        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ $self->target_name_ub_pl; };
         *{$update_sub_command_class_name.'::_property_name'} = sub{ $property->{name}; };
         *{$update_sub_command_class_name.'::_property_name_pl'} = sub{ $property->{name_pl}; };
-        *{$update_sub_command_class_name.'::_display_name_for_value'} = \&display_name_for_value;
     }
 
     $tree_class_name;

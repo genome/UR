@@ -6,60 +6,47 @@ use warnings 'FATAL';
 class Command::Update {
     is => 'Command::V2',
     is_abstract => 1,
+    has => {
+        target_name_pl => { via => 'namespace', to => 'target_name_pl', },
+        target_name_ub_pl => { via => 'namespace', to => 'target_name_ub_pl', },
+    },
     doc => 'CRUD update command class.',
 };
 
-sub _target_name_pl { Carp::confess('Please use CRUD or implement _target_name in '.$_[0]->class); }
-sub _target_name_pl_ub { Carp::confess('Please use CRUD or implement _target_name_ub in '.$_[0]->class); }
-sub _property_name { Carp::confess('Please use CRUD or implement _property_name in '.$_[0]->class); }
-sub _property_doc { return "modify '".join(' ', split('_', $_[0]->_property_name))."'"; }
-sub _only_if_null { Carp::confess('Please use CRUD or implement _only_if_null in '.$_[0]->class); }
-
-sub help_brief { return $_[0]->_property_doc; }
-
+sub help_brief { $_[0]->__meta__->doc }
 sub help_detail {
     my $class = shift;
-    my $help = 'Update '.$class->_property_name.' on '.$class->_target_name_pl.' Parameters are resolved via string.';
-    if ( $class->_only_if_null ) {
+    my $help = 'Update '.$class->property_name.' on '.$class->target_name_pl.' Parameters are resolved via string.';
+    if ( $class->only_if_null ) {
         $help .= " This property can only be updated if it is NULL.";
     }
     $help .= "\n\n";
-    return $help;
+    $help;
 }
 
 sub execute {
     my $self = shift;
 
-    my $property_name = $self->_property_name;
-    my $target_name_pl_ub = $self->_target_name_pl_ub;
-    my @objects = $self->$target_name_pl_ub;
-
     my $new_value = $self->value;
-    if ( $new_value eq '' ) {
-        #FIXME - this will set strings and direct objects to null.
-        # It does not work for a property that is through an many property. We are unsure of how we want to handle unsetting values.
-        $self->error_message("Cannot set $property_name to NULL. Sorry.");
-        return;
-    }
     $new_value = undef if $new_value eq '';
-    my $new_value_name = $self->_display_name_for_value($new_value);
+    my $new_value_name = Command::CrudUtil->display_name_for_value($new_value);
 
-    $self->status_message("Update $property_name for $target_name_pl_ub...");
-    for my $object ( @objects ) {
-        my $object_name = $self->_display_name_for_value($object);
-        my $old_value = $object->$property_name;
-        my $old_value_name = $self->_display_name_for_value($old_value);
-        if ( $self->_only_if_null and defined $old_value ) {
-            $self->status_message("$object_name  - cannot update because $property_name has value ($old_value_name)!");
+    my $property_name = $self->property_name;
+    my $target_name_ub_pl = $self->target_name_ub_pl;
+    my @objects = $self->$target_name_ub_pl;
+
+    $self->status_message("Update %s %s...", $self->target_name_pl, $property_name);
+    for my $obj( @objects ) {
+        my $old_value = $obj->$property_name;
+        my $old_value_name = Command::CrudUtil->display_name_for_value($old_value);
+        if ( $self->only_if_null and defined $old_value ) {
+            $self->status_message("FAILED_NOT_NULL\t%s\t%s", $obj->id, $old_value_name);
             next;
         }
-        $object->$property_name($new_value);
-        $self->status_message("$object_name - update from '$old_value_name' to '$new_value_name'.");
+        $obj->$property_name($new_value);
+        $self->status_message("UPDATE\t%s\t%s\t%s", $obj->id, $old_value_name, $new_value_name);
     }
-    $self->status_message('Update complete. Committing changes...');
-
-    return 1; 
+    1; 
 }
 
 1;
-
