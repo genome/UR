@@ -270,19 +270,18 @@ sub _build_create_command {
         $properties{$property{property_name}} = \%property;
     }
 
-    $self->fatal_message('No properties found for target class: '.$config{target_class}) if not %properties;
+    $self->fatal_message('No properties found for target class %s', $self->target_class) if not %properties;
 
     my $create_meta = UR::Object::Type->define(
         class_name => $create_command_class_name,
         is => 'Command::Create',
         has => \%properties,
-        doc => 'create '.$config{target_name_pl},
+        has_constant_transient => {
+            namespace => { value => $self->namespace, },
+            target_class_properties => { value => [ keys %properties ], },
+        },
+        doc => 'create '.$self->target_name_pl,
     );
-
-    no strict;
-    *{$create_command_class_name.'::_target_class'} = sub{ return $config{target_class}; };
-    *{$create_command_class_name.'::_target_name'} = sub{ return $config{target_name}; };
-    *{$create_command_class_name.'::_before'} = $config{before} if $config{before};
 
     $self->_add_to_namespace_sub_commands_and_names($create_command_class_name, 'create');
 }
