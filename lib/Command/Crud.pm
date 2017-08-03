@@ -527,28 +527,18 @@ sub _build_delete_command {
         class_name => $delete_command_class_name,
         is => 'Command::Delete',
         has => {
-            $self->target_name_ub_pl => {
+            $self->target_name_ub => {
                 is => $self->target_class,
-                is_many => 1,
                 shell_args_position => 1,
                 require_user_verify => 1,
-                doc => ucfirst($self->target_name_pl).' to delete, resolved via text string.',
+                doc => ucfirst($self->target_name).' to delete, resolved via text string.',
             },
         },
-        doc => 'delete '.$self->target_name_pl,
+        has_constant_transient => {
+            namespace => { value => $self->namespace, },
+        },
+        doc => 'delete '.$self->target_name,
     );
-
-    Sub::Install::install_sub({
-        code => sub{ $self->target_name_pl },
-        into => $delete_command_class_name,
-        as => '_target_name_pl',
-        });
-
-    Sub::Install::install_sub({
-        code => sub{ $self->target_name_ub_pl },
-        into => $delete_command_class_name,
-        as => '_target_name_pl_ub',
-        });
 
     $self->_add_to_namespace_sub_commands_and_names($delete_command_class_name, 'delete');
 }
