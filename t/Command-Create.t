@@ -10,31 +10,39 @@ use Test::More tests => 4;
 
 my %test;
 subtest 'setup' => sub{
-    plan tests => 4;
+    plan tests => 6;
 
     use_ok('Command::Create') or die;
     use_ok('Command::Crud') or die;
 
     my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'create' } Command::Crud->buildable_sub_command_names;
     Command::Crud->create_command_subclasses(
-        target_class => 'Test::Person',
+        target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );
 
-    $test{cmd} = 'Test::Person::Command::Create';
-    ok(UR::Object::Type->get($test{cmd}), 'person create command exists'),
+    $test{cmd} = 'Test::Muppet::Command::Create';
+    ok(UR::Object::Type->get($test{cmd}), 'muppet create command exists'),
+    print Data::Dumper::Dumper([map { $_->property_name } $test{cmd}->__meta__->properties]);
 
-    $test{mom} = Test::Person->create(name => 'mom');
-    ok($test{mom}, 'create mom');
+    $test{burt} = Test::Muppet->create(name => 'burt');
+    ok($test{burt}, 'create burt');
+
+    $test{rubber_ducky} = Test::Muppet->create(name => 'rubber ducky');
+    ok($test{rubber_ducky}, 'create rubber ducky');
+
+    $test{job} = Test::Job->create(name => 'troublemaker');
+    ok($test{job}, 'create job');
 
 };
 
 subtest 'command properties' => sub{
-    plan tests => 2;
+    plan tests => 3;
 
     my $cmd = $test{cmd}->create;
-    is($cmd->namespace, 'Test::Person::Command', 'namepace');
-    is($cmd->target_class, 'Test::Person', 'target_class');
+    is($cmd->namespace, 'Test::Muppet::Command', 'namepace');
+    is($cmd->target_class, 'Test::Muppet', 'target_class');
+    is($cmd->target_name, 'test muppet', 'target_name');
     $cmd->delete;
 
 };
@@ -49,21 +57,23 @@ subtest 'fails' => sub{
 };
 
 subtest 'create' => sub{
-    plan tests => 6;
+    plan tests => 7;
 
     my %params = (
         name => 'me',
         title => 'mr',
-        has_pets => 'no',
-        mom => $test{mom},
+        friends => [$test{rubber_ducky} ],
+        best_friend => $test{burt},
+        job => $test{job},
     );
     lives_ok(sub{ $test{cmd}->execute(%params); }, 'create');
 
-    my $new_person = Test::Person->get(name => 'me');
-    ok($new_person, 'created new person');
-    is($new_person->title, 'mr', 'title');
-    is($new_person->has_pets, 'no', 'has_pets');
-    is($new_person->mom, $test{mom}, 'mom');
+    my $new_muppet = Test::Muppet->get(name => 'me');
+    ok($new_muppet, 'created new muppet');
+    is($new_muppet->title, 'mr', 'title');
+    is($new_muppet->job, $test{job}, 'job');
+    is($new_muppet->best_friend, $test{burt}, 'burt is best_friend');
+    is_deeply([$new_muppet->friends], [$test{rubber_ducky}], 'friends');
 
     ok(UR::Context->commit, 'commit');
 

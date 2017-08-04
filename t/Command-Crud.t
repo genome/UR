@@ -14,12 +14,12 @@ subtest 'setup' => sub{
 
     %test = (
         pkg => 'Command::Crud',
-        target_class => 'Test::Person',
-        namespace => 'Test::Person::Command',
-        target_name => 'test person',
-        target_name_pl => 'test persons',
-        target_name_ub => 'test_person',
-        target_name_ub_pl => 'test_persons',
+        target_class => 'Test::Muppet',
+        namespace => 'Test::Muppet::Command',
+        target_name => 'test muppet',
+        target_name_pl => 'test muppets',
+        target_name_ub => 'test_muppet',
+        target_name_ub_pl => 'test_muppets',
         sub_command_names => [qw/ copy create delete list update /],
     );
     use_ok($test{pkg}) or die;
@@ -59,7 +59,7 @@ subtest 'crud and namespace target names' => sub{
 };
 
 subtest 'commands' => sub{
-    plan tests => 16;
+    plan tests => 17;
 
     for ( @{$test{sub_command_names}} ) {
         my $method = $_.'_command_class_name';
@@ -72,7 +72,7 @@ subtest 'commands' => sub{
     my @namespace_sub_command_classes = map { my $m = $_.'_command_class_name'; $test{crud}->$m($_); } @{$test{sub_command_names}};
     is_deeply([sort $test{crud}->namespace_sub_command_classes], [sort @namespace_sub_command_classes], 'namespace_sub_command_classes');
 
-    my @property_names = sort (qw/ name title has_pets job friends mom best_friend /);
+    my @property_names = sort (qw/ name title job friends best_friend /);
     my $update_class = join('::', $test{namespace}, 'Update');
     my @expected_sub_command_classes = map { my $p = $_; join('::', $update_class, join('', map { ucfirst } split(/_/, ucfirst($_)))) } @property_names;
     is_deeply([$update_class->sub_command_classes], \@expected_sub_command_classes, 'update property sub command classes');
@@ -86,6 +86,9 @@ subtest 'commands' => sub{
             ok($sub_command, "$update_property_tree_class exists");
         }
     }
+
+    my $relationship_sub_command = UR::Object::Type->get(join('::', $test{namespace}, 'Update', 'Relationship'));
+    ok(!$relationship_sub_command, "relationship sub command does not exist");
 
 };
 

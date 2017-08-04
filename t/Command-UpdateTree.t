@@ -15,13 +15,13 @@ subtest 'tests' => sub{
 
     my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'update' } Command::Crud->buildable_sub_command_names;
     Command::Crud->create_command_subclasses(
-        target_class => 'Test::Person',
+        target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );
 
-    my $cmd = 'Test::Person::Command::Update';
-    ok(UR::Object::Type->get($cmd), 'person update tree command exists'),
-    isa_ok($cmd, 'Command::UpdateTree');
+    my $pkg = 'Test::Muppet::Command::Update';
+    ok(UR::Object::Type->get($pkg), 'muppet update tree command exists'),
+    isa_ok($pkg, 'Command::UpdateTree');
 
 };
 

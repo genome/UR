@@ -52,17 +52,17 @@ sub Test::Job::__display_name__ { $_[0]->name }
 class Test::Relationship {
     is  => 'UR::Object',
     id_by => {
-        person_id => { is => 'Number', implied_by => 'person', },
+        muppet_id => { is => 'Number', implied_by => 'muppet', },
         related_id => { is => 'Number', implied_by => 'related' },
         name => { is => 'Text', },
     },
     has => {
-        person => { is => 'Test::Person', id_by => 'person_id', },
-        related => { is => 'Test::Person', id_by => 'related_id' },
+        muppet => { is => 'Test::Muppet', id_by => 'muppet_id', },
+        related => { is => 'Test::Muppet', id_by => 'related_id' },
     },
 };
 
-class Test::Person {
+class Test::Muppet {
     is => 'UR::Object',
     has => {
         name => { is => 'Text', doc => 'Name of the tester', },
@@ -72,58 +72,41 @@ class Test::Person {
             valid_values => [qw/ mr sir mrs ms miss dr /],
             doc => 'Title',
         },
-        has_pets => {
-            is => 'Text',
-            is_optional => 1,
-            valid_values => [qw/ yes no /],
-            default_value => 'no',
-            doc => 'Does this person have pets?',
-        },
         job => {
             is => 'Test::Job',
             id_by => 'job_id',
             is_optional => 1,
-            doc => 'The person\'s job',
+            doc => 'The muppet\'s job',
         },
         relationships => {
             is => 'Test::Relationship',
             is_many => 1,
             is_optional => 1,
-            reverse_as => 'person',
-            doc => 'This person\'s relationships',
+            reverse_as => 'muppet',
+            doc => 'This muppet\'s relationships',
         },
         friends => {
-            is => 'Test::Person',
+            is => 'Test::Muppet',
             is_many => 1,
             is_optional => 1,
             is_mutable => 1,
             via => 'relationships',
             to => 'related',
-            where => [ name => 'friend' ],
-            doc => 'Friends of this person',
+            where => [ 'name' => 'friend' ],
+            doc => 'Friends of this muppet',
         },
-       mom => {
-           is => 'Test::Person',
-           is_optional => 1,
-           is_mutable => 1,
-           is_many => 0,
-           via => 'relationships',
-           to => 'related',
-           where => [ name => 'mom' ],
-           doc => 'The person\'s Mom',
-       },
        best_friend => {
-           is => 'Test::Person',
+           is => 'Test::Muppet',
            is_optional => 1,
            is_mutable => 1,
            is_many => 0,
            via => 'relationships',
            to => 'related',
            where => [ name => 'best friend' ],
-           doc => 'Best friend of this person',
+           doc => 'Best friend of this muppet',
        },
     },
 };
-sub Test::Person::__display_name__ { $_[0]->name }
+sub Test::Muppet::__display_name__ { $_[0]->name }
 
 1;

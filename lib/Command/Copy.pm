@@ -9,10 +9,6 @@ class Command::Copy {
     is => 'Command::V2',
     is_abstract => 1,
     has => {
-        source => {
-            is => 'UR::Object',
-            shell_args_position => 1,
-        },
         changes => {
             is => 'Text',
             is_many => 1,
