@@ -23,7 +23,6 @@ subtest 'setup' => sub{
 
     $test{cmd} = 'Test::Muppet::Command::Create';
     ok(UR::Object::Type->get($test{cmd}), 'muppet create command exists'),
-    print Data::Dumper::Dumper([map { $_->property_name } $test{cmd}->__meta__->properties]);
 
     $test{burt} = Test::Muppet->create(name => 'burt');
     ok($test{burt}, 'create burt');
@@ -37,12 +36,11 @@ subtest 'setup' => sub{
 };
 
 subtest 'command properties' => sub{
-    plan tests => 3;
+    plan tests => 2;
 
     my $cmd = $test{cmd}->create;
     is($cmd->namespace, 'Test::Muppet::Command', 'namepace');
     is($cmd->target_class, 'Test::Muppet', 'target_class');
-    is($cmd->target_name, 'test muppet', 'target_name');
     $cmd->delete;
 
 };
@@ -60,7 +58,7 @@ subtest 'create' => sub{
     plan tests => 7;
 
     my %params = (
-        name => 'me',
+        name => 'ernie',
         title => 'mr',
         friends => [$test{rubber_ducky} ],
         best_friend => $test{burt},
@@ -68,7 +66,7 @@ subtest 'create' => sub{
     );
     lives_ok(sub{ $test{cmd}->execute(%params); }, 'create');
 
-    my $new_muppet = Test::Muppet->get(name => 'me');
+    my $new_muppet = Test::Muppet->get(name => 'ernie');
     ok($new_muppet, 'created new muppet');
     is($new_muppet->title, 'mr', 'title');
     is($new_muppet->job, $test{job}, 'job');
