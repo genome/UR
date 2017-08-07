@@ -403,7 +403,7 @@ sub _build_update_command {
 
         my $update_sub_command;
         if ( $property{is_many} ) {
-            $update_sub_command = $self->_build_update_add_remove_property_sub_commands(\%property);
+            $update_sub_command = $self->_build_update_is_many_property_sub_commands(\%property);
         }
         else {
             $update_sub_command = $self->_build_update_property_sub_command(\%property);
@@ -453,10 +453,10 @@ sub _build_update_property_sub_command {
     $update_property_class_name;
 }
 
-sub _build_update_add_remove_property_sub_commands {
+sub _build_update_is_many_property_sub_commands {
     my ($self, $property) = @_;
 
-    my $tree_class_name = $self->namespace.'::Update::'.join('', map { ucfirst } split('_', $property->{name_pl}));
+    my $tree_class_name = join('::', $self->namespace, 'Update', join('', map { ucfirst } split('_', $property->{name_pl})));
     UR::Object::Type->define(
         class_name => $tree_class_name,
         is => 'Command::Tree',
@@ -464,17 +464,14 @@ sub _build_update_add_remove_property_sub_commands {
     );
 
     my @update_sub_command_class_names;
-    no strict;
-    *{$update_tree_class_name.'::_target_name'} = sub{ return $config{target_name}; };
-    *{$update_tree_class_name.'::_target_name_ub'} = sub{ return $config{target_name_ub}; };
-    *{$update_tree_class_name.'::_property_name'} = sub{ return $property->{name}; };
-    *{$update_tree_class_name.'::_property_name_pl'} = sub{ return $property->{name_pl}; };
-    *{$update_tree_class_name.'::_display_name_for_value'} = \&display_name_for_value;
-    *{$update_tree_class_name.'::sub_command_classes'} = sub{ @update_sub_command_class_names; };
-    use strict;
+    Sub::Install::reinstall_sub({
+        code => sub{ @update_sub_command_class_names },
+        into => $tree_class_name,
+        as => 'sub_command_classes',
+        });
 
     for my $function (qw/ add remove /) {
-        my $sub_command_class_name = $tree_class_name.'::'.ucfirst($function);
+        my $sub_command_class_name = join('::', $tree_class_name, ucfirst($function));
         push @update_sub_command_class_names, $sub_command_class_name;
         UR::Object::Type->define(
             class_name => $sub_command_class_name,
@@ -493,17 +490,12 @@ sub _build_update_add_remove_property_sub_commands {
                     doc => $property->{doc},
                 },
             },
-            #has_constant_transient => {
-            #},
-            doc => $self->target_name_pl.' '.$function.' '.$property->{name_pl},
+            has_constant_transient => {
+                namespace => { value => $self->namespace, },
+                property_function => { value => join('_', $function, $property->{name}), },
+            },
+            doc => join(' ', $self->target_name_pl, $function, $property->{name_pl}),
         );
-        no strict;
-        *{$update_sub_command_class_name.'::_add_or_remove'} = sub{ $function; };
-        *{$update_sub_command_class_name.'::_target_name'} = sub{ $self->target_name; };
-        *{$update_sub_command_class_name.'::_target_name_pl'} = sub{ $self->target_name_pl; };
-        *{$update_sub_command_class_name.'::_target_name_pl_ub'} = sub{ $self->target_name_ub_pl; };
-        *{$update_sub_command_class_name.'::_property_name'} = sub{ $property->{name}; };
-        *{$update_sub_command_class_name.'::_property_name_pl'} = sub{ $property->{name_pl}; };
     }
 
     $tree_class_name;
