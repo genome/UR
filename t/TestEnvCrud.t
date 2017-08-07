@@ -32,15 +32,17 @@ subtest 'ENVs' => sub{
 };
 
 subtest 'test classes' => sub{
-    plan tests => 5;
+    plan tests => 7;
 
-    for my $class (qw/ Test::Person Test::Job Test::Relationship /) {
+    for my $class (qw/ Test::Muppet Test::Job Test::Relationship /) {
         my $meta = UR::Object::Type->get($class);
         ok($meta, "test $class meta");
     }
 
-    can_ok('Test::Person', 'job');
-    can_ok('Test::Person', 'relationships');
+    can_ok('Test::Muppet', 'job');
+    can_ok('Test::Muppet', 'relationships');
+    can_ok('Test::Muppet', 'friends');
+    can_ok('Test::Muppet', 'best_friend');
 
 };
 
