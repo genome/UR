@@ -20,24 +20,26 @@ sub help_detail { $_[0]->__meta__->doc }
 sub execute {
     my $self = shift;
 
-    my %properties;
+    my (%properties, %display_ids);
     for my $property_name ( @{$self->target_class_properties} ) {
         my @values = $self->$property_name;
         next if not defined $values[0];
         my $property = $self->__meta__->property_meta_for_name($property_name);
         if ( $property->is_many ) {
             $properties{$property_name} = \@values;
+            $display_ids{$property_name} = [ map { Command::CrudUtil->display_id_for_value($_) } @values ];
         }
         else {
             $properties{$property_name} = $values[0];
+            $display_ids{$property_name} = Command::CrudUtil->display_id_for_value($values[0]);
         }
     }
 
     $self->status_message("Params:");
-    $self->status_message( YAML::Dump({ map { $_ => Command::CrudUtil->display_name_for_value($properties{$_}) } keys %properties }) );
-    my $target_class = $self->target_class;
+    $self->status_message( YAML::Dump(\%display_ids) );
 
     my $tx = UR::Context::Transaction->begin;
+    my $target_class = $self->target_class;
     my $obj = $target_class->create(%properties);
     $self->fatal_message('Create failed!') if not $obj;
 
