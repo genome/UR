@@ -3,8 +3,6 @@ package Command::Copy;
 use strict;
 use warnings FATAL => 'all';
 
-use Try::Tiny qw(try catch);
-
 class Command::Copy {
     is => 'Command::V2',
     is_abstract => 1,
@@ -32,45 +30,37 @@ HELP
 sub execute {
     my $self = shift;
 
-    my $tx = UR::Context::Transaction->begin();
+    my $tx = UR::Context::Transaction->begin;
 
-    my $error;
-    my $copy = try {
-        my $copy = $self->source->copy();
+    my $copy = $self->source->copy();
 
-        for my $change ($self->changes) {
-            my ($key, $op, $value) = $change =~ /^(.+?)(=|\+=|\-=|\.=)(.*)$/;
-            die ("Invalid change: $change") unless $key && $op;
-            die sprintf('Invalid property %s for %s', $key, $copy->__display_name__) if !$copy->can($key);
+    for my $change ($self->changes) {
+        my ($key, $op, $value) = $change =~ /^(.+?)(=|\+=|\-=|\.=)(.*)$/;
+        $self->fatal_message("Invalid change: $change") unless $key and defined $op;
+        $self->fatal_message('Invalid property %s for %s', $key, $copy->__display_name__) if !$copy->can($key);
 
-            $value = undef if $value =~ /^undef$/i;
+        $value = undef if $value =~ /^undef$/i;
 
-            if ($op eq '=') {
-                $copy->$key($value);
-            }
-            elsif ($op eq '+=') {
-                $copy->$key($copy->$key + $value);
-            }
-            elsif ($op eq '-=') {
-                $copy->$key($copy->$key - $value);
-            }
-            elsif ($op eq '.=') {
-                $copy->$key($copy->$key . $value);
-            }
+        if ($op eq '=') {
+            $copy->$key($value);
         }
-
-        die 'Failed to commit!' if !$tx->commit;
-        $copy;
+        elsif ($op eq '+=') {
+            $copy->$key($copy->$key + $value);
+        }
+        elsif ($op eq '-=') {
+            $copy->$key($copy->$key - $value);
+        }
+        elsif ($op eq '.=') {
+            $copy->$key($copy->$key . $value);
+        }
     }
-    catch {
+
+    if (!$tx->commit ) {
         $tx->rollback;
-        $error = $_ || 'Unknown error';
-        return;
-    };
+        $self->fatal_message('Failed to commit software transaction!');
+    }
 
-    $self->fatal_message('Failed to create new %s: %s', $self->source->class, $error) if !$copy;
-
-    $self->status_message('Created new %s with ID %s', $copy->class, $copy->id);
+    $self->status_message("NEW\t%s\t%s", $copy->class, $copy->__display_name__);
     1;
 }
 
