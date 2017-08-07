@@ -6,7 +6,7 @@ use warnings 'FATAL';
 use TestEnvCrud;
 
 use Test::Exception;
-use Test::More tests => 5;
+use Test::More tests => 4;
 
 my %test = ( pkg => 'Command::CrudUtil', );
 subtest 'setup' => sub{
@@ -17,14 +17,6 @@ subtest 'setup' => sub{
     $test{muppet} = Test::Muppet->create(name => 'ernie');
     ok($test{muppet}, 'create muppet');
 
-};
-
-subtest 'camel_case_to_string' => sub{
-    plan tests => 3;
-
-    throws_ok(sub{ $test{pkg}->camel_case_to_string; }, qr/2 were expected/, 'camel_case_to_string fails w/o string');
-    is($test{pkg}->camel_case_to_string('Thing'), 'thing', 'camel_case_to_string Thing => thing');
-    is($test{pkg}->camel_case_to_string('GreatThing'), 'great thing', 'camel_case_to_string GreatThing => great thing');
 };
 
 subtest 'display_name_for_value' => sub{

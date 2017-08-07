@@ -129,7 +129,7 @@ sub _resolve_target_names {
     my $self = shift;
 
     if ( !$self->target_name ) {
-        $self->target_name( join(' ', map { Command::CrudUtil->camel_case_to_string($_) } split('::', $self->target_class)) );
+        $self->target_name( join(' ', map { lc(UR::Value::Text->get($_)->to_camel) } split('::', $self->target_class)) );
     }
 
     if ( !$self->target_name_pl ) {

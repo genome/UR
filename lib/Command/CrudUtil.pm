@@ -9,11 +9,6 @@ class Command::CrudUtil {
     doc => 'Utils for CRUD commands',
 };
 
-sub camel_case_to_string {
-    my ($class, $string) = validate_pos(@_, {isa => __PACKAGE__}, {is => SCALAR});
-    join(' ', map { lc } split( /(?=(?<![A-Z])[A-Z])|(?=(?<!\d)\d)/, $string)); #split on the first capital or the start of a number
-}
-
 sub display_name_for_value {
     my ($class, $value) = @_;
 
