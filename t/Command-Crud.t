@@ -20,7 +20,6 @@ subtest 'setup' => sub{
         target_name_pl => 'test muppets',
         target_name_ub => 'test_muppet',
         target_name_ub_pl => 'test_muppets',
-        sub_command_names => [qw/ copy create delete list update /],
     );
     use_ok($test{pkg}) or die;
 
@@ -31,14 +30,14 @@ subtest 'create_command_subclasses' => sub{
 
     throws_ok(sub{ Command::Crud->create_command_subclasses; }, qr/No target_class given/, 'fails w/o target_class');
 
-    my %sub_command_configs = map { $_ => { skip => 1 } } @{$test{sub_command_names}};
+    my %sub_command_configs = map { $_ => { skip => 1 } } Command::Crud->buildable_sub_command_names;
     lives_ok(sub{
             $test{crud} = Command::Crud->create_command_subclasses(
                 target_class => $test{target_class},
                 sub_command_configs => \%sub_command_configs,
                 );},
-           'create_command_subclasses');
-    for ( @{$test{sub_command_names}} ) {
+           'create_command_subclasses skipping all');
+    for ( Command::Crud->buildable_sub_command_names ) {
         ok(!UR::Object::Type->get($test{namespace}.'::'.ucfirst($_)), "did not create sub command for $_");
     }
     $test{crud}->delete;
@@ -61,15 +60,14 @@ subtest 'crud and namespace target names' => sub{
 subtest 'commands' => sub{
     plan tests => 17;
 
-    for ( @{$test{sub_command_names}} ) {
-        my $method = $_.'_command_class_name';
-        my $class_name = $test{crud}->$method;
+    for ( Command::Crud->buildable_sub_command_names ) {
+        my $class_name = $test{crud}->sub_command_class_name_for($_);
         is($class_name, $test{namespace}.'::'.ucfirst($_), "$_ subcommand class name");
         lives_ok(sub { $class_name->__meta__; }, "$_ comand was created"); # will unit test individual commands
     }
 
-    is_deeply([sort $test{crud}->namespace_sub_command_names], [sort @{$test{sub_command_names}}], 'namespace_sub_command_names');
-    my @namespace_sub_command_classes = map { my $m = $_.'_command_class_name'; $test{crud}->$m($_); } @{$test{sub_command_names}};
+    is_deeply([sort $test{crud}->namespace_sub_command_names], [sort Command::Crud->buildable_sub_command_names], 'namespace_sub_command_names');
+    my @namespace_sub_command_classes = map { $test{crud}->sub_command_class_name_for($_); } Command::Crud->buildable_sub_command_names;
     is_deeply([sort $test{crud}->namespace_sub_command_classes], [sort @namespace_sub_command_classes], 'namespace_sub_command_classes');
 
     my @property_names = sort (qw/ name title job friends best_friend /);

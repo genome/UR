@@ -34,26 +34,6 @@ class Command::Crud {
             calculate_from => [qw/ target_name_pl /],
             calculate => q( $target_name_pl =~ s/ /_/g; $target_name_pl; ),
         },
-        copy_command_class_name => {
-            calculate_from => [qw/ namespace /],
-            calculate => q( $namespace.'::Copy' ),
-        },
-        create_command_class_name => {
-            calculate_from => [qw/ namespace /],
-            calculate => q( $namespace.'::Create' ),
-        },
-        list_command_class_name => {
-            calculate_from => [qw/ namespace /],
-            calculate => q( $namespace.'::List' ),
-        },
-        update_command_class_name => {
-            calculate_from => [qw/ namespace /],
-            calculate => q( $namespace.'::Update' ),
-        },
-        delete_command_class_name => {
-            calculate_from => [qw/ namespace /],
-            calculate => q( $namespace.'::Delete' ),
-        },
     },
     has_transient_optional => {
         namespace_sub_command_classes => {
@@ -69,6 +49,9 @@ class Command::Crud {
 };
 
 sub buildable_sub_command_names { (qw/ copy create delete list update /) }
+sub sub_command_class_name_for {
+    join('::', $_[0]->namespace, join('', map { ucfirst } split(/\s+/, $_[1])));
+}
 
 sub sub_command_config_for {
     my ($self, $name) = @_;
@@ -119,13 +102,9 @@ sub _get_current_namespace_sub_commands_and_names {
 }
 
 sub _add_to_namespace_sub_commands_and_names {
-    my ($self, $sub_command, $name) = @_;
-    my @sub_commands = $self->namespace_sub_command_classes;
-    push @sub_commands, $sub_command;
-    $self->namespace_sub_command_classes(\@sub_commands);
-    my @names = $self->namespace_sub_command_names;
-    push @names, $name;
-    $self->namespace_sub_command_names(\@names);
+    my ($self, $name) = @_;
+    $self->namespace_sub_command_names([ sort { $a cmp $b } $self->namespace_sub_command_names, $name ]);
+    $self->namespace_sub_command_classes([ sort { $a cmp $b } $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
 }
 
 sub _set_namespace_sub_commands_and_names {
@@ -182,7 +161,7 @@ sub _build_command_tree {
 sub _build_list_command {
     my $self = shift;
 
-    my $list_command_class_name = $self->list_command_class_name;
+    my $list_command_class_name = $self->sub_command_class_name_for('list');
     return if UR::Object::Type->get($list_command_class_name); # Do not recreate...
 
     my %config = $self->sub_command_config_for('list');
@@ -219,13 +198,13 @@ sub _build_list_command {
         as => 'help_brief',
         });
 
-    $self->_add_to_namespace_sub_commands_and_names($list_command_class_name, 'list');
+    $self->_add_to_namespace_sub_commands_and_names('list');
 }
 
 sub _build_create_command {
     my $self = shift;
 
-    my $create_command_class_name = $self->create_command_class_name;
+    my $create_command_class_name = $self->sub_command_class_name_for('create');
     return if UR::Object::Type->get($create_command_class_name); # Do not recreate...
 
     my %config = $self->sub_command_config_for('create');
@@ -283,13 +262,13 @@ sub _build_create_command {
         doc => 'create '.$self->target_name_pl,
     );
 
-    $self->_add_to_namespace_sub_commands_and_names($create_command_class_name, 'create');
+    $self->_add_to_namespace_sub_commands_and_names('create');
 }
 
 sub _build_copy_command {
     my $self = shift;
 
-    my $copy_command_class_name = $self->copy_command_class_name;
+    my $copy_command_class_name = $self->sub_command_class_name_for('copy');
     return if UR::Object::Type->get($copy_command_class_name);
     
     my %config = $self->sub_command_config_for('copy');
@@ -308,7 +287,7 @@ sub _build_copy_command {
         },
     );
 
-    $self->_add_to_namespace_sub_commands_and_names($copy_command_class_name, 'copy');
+    $self->_add_to_namespace_sub_commands_and_names('copy');
 }
 
 sub _build_update_command {
@@ -346,7 +325,7 @@ sub _build_update_command {
     }
 
     # Update Tree
-    my $update_command_class_name = $self->update_command_class_name;
+    my $update_command_class_name = $self->sub_command_class_name_for('update');
     my $update_meta = UR::Object::Type->get($update_command_class_name);
 
     my (@update_sub_commands, @update_sub_command_names);
@@ -417,13 +396,13 @@ sub _build_update_command {
         as => 'sub_command_classes',
         });
 
-    $self->_add_to_namespace_sub_commands_and_names($update_command_class_name, 'update');
+    $self->_add_to_namespace_sub_commands_and_names('update');
 }
 
 sub _build_update_property_sub_command {
     my ($self, $property) = @_;
 
-    my $update_property_class_name = join('::', $self->update_command_class_name, join('', map { ucfirst } split('_', $property->{name})));
+    my $update_property_class_name = join('::', $self->sub_command_class_name_for('update'), join('', map { ucfirst } split('_', $property->{name})));
     return if UR::Object::Type->get($update_property_class_name);
 
     UR::Object::Type->define(
@@ -504,8 +483,8 @@ sub _build_update_is_many_property_sub_commands {
 sub _build_delete_command {
     my $self = shift;
 
-    my $delete_command_class_name = $self->delete_command_class_name;
-    return if UR::Object::Type->get($self->delete_command_class_name);
+    my $delete_command_class_name = $self->sub_command_class_name_for('delete');
+    return if UR::Object::Type->get($delete_command_class_name);
 
     my %config = $self->sub_command_config_for('delete');
     return if exists $config{skip}; # Do not create if told not too...
@@ -527,7 +506,7 @@ sub _build_delete_command {
         doc => 'delete '.$self->target_name,
     );
 
-    $self->_add_to_namespace_sub_commands_and_names($delete_command_class_name, 'delete');
+    $self->_add_to_namespace_sub_commands_and_names('delete');
 }
 
 1;
