@@ -58,24 +58,4 @@ sub display_id_for_value {
     }
 }
 
-sub resolve_incoming_property_names {
-    my ($class, $names) = @_;
-
-    return if not $names;
-
-    my @names;
-    my $ref = ref $names;
-    if ( not $ref ) {
-        @names = $names;
-    }
-    elsif ( $ref eq 'ARRAY' ) {
-        @names = @$names;
-    }
-    else {
-        die "Dunno how to incoming_names_to_array with ".Data::Dumper::Dumper($names);
-    }
-
-    map { s/_id$//; $_; } @names; # remove trailing '_id'
-}
-
 1;

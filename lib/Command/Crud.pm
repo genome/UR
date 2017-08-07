@@ -9,11 +9,11 @@ use Command::Delete;
 use Command::Update;
 use Command::UpdateTree;
 use Command::UpdateIsMany;
-use UR::Object::Command::List;
 use Command::CrudUtil;
 use Lingua::EN::Inflect;
 use List::MoreUtils;
 use Sub::Install;
+use UR::Object::Command::List;
 
 class Command::Crud {
     id_by => {
@@ -210,8 +210,12 @@ sub _build_create_command {
     my %config = $self->sub_command_config_for('create');
     return if exists $config{skip}; # Do not create if told not too...
 
-    my @exclude = Command::CrudUtil->resolve_incoming_property_names( delete $config{exclude} );
-    $self->fatal_message('Unknown config for CREATE %s', Data::Dumper::Dumper(\%config)) if %config;
+    my @exclude;
+    if ( exists $config{exclude} ) {
+       @exclude = @{delete $config{exclude}};
+    }
+
+    $self->fatal_message('Unknown config for CREATE: %s', Data::Dumper::Dumper(\%config)) if %config;
 
     my $target_meta = $self->target_class->__meta__;
     my %properties;
@@ -301,13 +305,11 @@ sub _build_update_command {
     my $target_meta = $self->target_class->__meta__;
     my @properties = $target_meta->property_metas;
 
-    # include only these properties
-    my @include_only = Command::CrudUtil->resolve_incoming_property_names( delete $config{include_only} );
-    my @exclude = Command::CrudUtil->resolve_incoming_property_names( delete $config{exclude} );
-    if ( @include_only and @exclude ) {
-        $self->fatal_message('Cannot include only and exclude update sub commands!');
+    # exclude these properties
+    my @exclude;
+    if ( exists $config{exclude} ) {
+       @exclude = @{delete $config{exclude}};
     }
-    # TODO validate property names?
 
     # only if null
     my %only_if_null;
@@ -323,6 +325,8 @@ sub _build_update_command {
             %only_if_null = map { $_ => 1 } map { s/_id$//; $_; } ( $ref eq 'ARRAY' ? @$only_if_null : keys %$only_if_null )
         }
     }
+
+    $self->fatal_message('Unknown config for UPDATE: %s', Data::Dumper::Dumper(\%config)) if %config;
 
     # Update Tree
     my $update_command_class_name = $self->sub_command_class_name_for('update');
@@ -346,8 +350,7 @@ sub _build_update_command {
     PROPERTY: for my $target_property ( $target_meta->property_metas ) {
         my $property_name = $target_property->property_name;
         next if grep { $property_name eq $_ } @update_sub_command_names;
-        next if @include_only and not grep { $property_name =~ /^$_(_id)?$/ } @include_only;
-        next if @exclude and grep { $property_name =~ /^$_(_id)?$/ } @exclude;
+        next if List::MoreUtils::any { $property_name eq $_ } @exclude;
 
         next if $target_property->class_name eq 'UR::Object';
         next if $property_name =~ /^_/;
@@ -488,6 +491,8 @@ sub _build_delete_command {
 
     my %config = $self->sub_command_config_for('delete');
     return if exists $config{skip}; # Do not create if told not too...
+
+    $self->fatal_message('Unknown config for DELETE: %s', Data::Dumper::Dumper(\%config)) if %config;
 
     UR::Object::Type->define(
         class_name => $delete_command_class_name,
