@@ -18,11 +18,19 @@ sub help_detail { $_[0]->__meta__->doc }
 sub execute {
     my $self = shift;
 
+    my $tx = UR::Context::Transaction->begin;
+
     my $target_name_ub = $self->target_name_ub;
     my $obj = $self->$target_name_ub;
-    $self->status_message('Deleting %s', $obj->__display_name__);
+    my $msg = sprintf('DELETE %s %s', $obj->class, $obj->id);
     $obj->delete;
 
+    if (!$tx->commit ) {
+        $tx->rollback;
+        $self->fatal_message('Failed to commit software transaction!');
+    }
+
+    $self->status_message($msg);
     1;
 }
 
