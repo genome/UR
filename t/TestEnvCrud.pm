@@ -40,6 +40,7 @@ sub test_data_directory_for_package {
 
 class Test::Job {
     is => 'UR::Object',
+    id_generator => '-uuid',
     id_by => {
         job_id => { is => 'Number', },
     },
@@ -51,6 +52,7 @@ sub Test::Job::__display_name__ { $_[0]->name }
 
 class Test::Relationship {
     is  => 'UR::Object',
+    id_generator => '-uuid',
     id_by => {
         muppet_id => { is => 'Number', implied_by => 'muppet', },
         related_id => { is => 'Number', implied_by => 'related' },
@@ -64,8 +66,9 @@ class Test::Relationship {
 
 class Test::Muppet {
     is => 'UR::Object',
+    id_generator => '-uuid',
     has => {
-        name => { is => 'Text', doc => 'Name of the tester', },
+        name => { is => 'Text', doc => 'Name of the muppet', },
         title => {
             is => 'Text',
             is_optional => 1,
