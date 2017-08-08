@@ -103,8 +103,8 @@ sub _get_current_namespace_sub_commands_and_names {
 
 sub _add_to_namespace_sub_commands_and_names {
     my ($self, $name) = @_;
-    $self->namespace_sub_command_names([ sort { $a cmp $b } $self->namespace_sub_command_names, $name ]);
-    $self->namespace_sub_command_classes([ sort { $a cmp $b } $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
+    $self->namespace_sub_command_names([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_names, $name ]);
+    $self->namespace_sub_command_classes([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
 }
 
 sub _set_namespace_sub_commands_and_names {
