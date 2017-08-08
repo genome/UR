@@ -12,12 +12,12 @@ my %test;
 subtest 'setup' => sub{
     plan tests => 6;
 
-    use_ok('Command::Update') or die;
-    use_ok('Command::Crud') or die;
+    use_ok('UR::Object::Command::Update') or die;
+    use_ok('UR::Object::Command::Crud') or die;
 
-    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'update' } Command::Crud->buildable_sub_command_names;
+    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'update' } UR::Object::Command::Crud->buildable_sub_command_names;
     $sub_command_configs{update}->{only_if_null} = [qw/ best_friend name /];
-    Command::Crud->create_command_subclasses(
+    UR::Object::Command::Crud->create_command_subclasses(
         target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );

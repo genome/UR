@@ -1,9 +1,9 @@
-package Command::UpdateTree;
+package UR::Object::Command::UpdateTree;
 
 use strict;
 use warnings 'FATAL';
 
-class Command::UpdateTree {
+class UR::Object::Command::UpdateTree {
     is => 'Command::Tree',
     doc => 'CRUD update tree class.',
 };

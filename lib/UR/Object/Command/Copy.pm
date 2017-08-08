@@ -1,9 +1,9 @@
-package Command::Copy;
+package UR::Object::Command::Copy;
 
 use strict;
 use warnings FATAL => 'all';
 
-class Command::Copy {
+class UR::Object::Command::Copy {
     is => 'Command::V2',
     is_abstract => 1,
     has => {

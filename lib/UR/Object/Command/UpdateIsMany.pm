@@ -1,9 +1,9 @@
-package Command::UpdateIsMany;
+package UR::Object::Command::UpdateIsMany;
 
 use strict;
 use warnings 'FATAL';
 
-class Command::UpdateIsMany {
+class UR::Object::Command::UpdateIsMany {
     is => 'Command::V2',
     is_abstract => 1,
     has_constant_transient => {
@@ -22,9 +22,9 @@ sub execute {
     my $property_function = $self->property_function;
     my @new_values = $self->values;
     OBJECT: for my $object ( $self->$target_name_ub_pl ) {
-        my $object_id = Command::CrudUtil->display_id_for_value($object);
+        my $object_id = UR::Object::Command::CrudUtil->display_id_for_value($object);
         for my $new_value ( $self->values ) {
-            my $new_value_id = Command::CrudUtil->display_id_for_value($new_value);
+            my $new_value_id = UR::Object::Command::CrudUtil->display_id_for_value($new_value);
             $self->status_message("%s\t%s\t%s", uc($property_function), $object_id, $new_value_id);
             $object->$property_function($new_value);
         }

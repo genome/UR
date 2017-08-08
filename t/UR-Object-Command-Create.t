@@ -12,11 +12,11 @@ my %test;
 subtest 'setup' => sub{
     plan tests => 6;
 
-    use_ok('Command::Create') or die;
-    use_ok('Command::Crud') or die;
+    use_ok('UR::Object::Command::Create') or die;
+    use_ok('UR::Object::Command::Crud') or die;
 
-    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'create' } Command::Crud->buildable_sub_command_names;
-    Command::Crud->create_command_subclasses(
+    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'create' } UR::Object::Command::Crud->buildable_sub_command_names;
+    UR::Object::Command::Crud->create_command_subclasses(
         target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );

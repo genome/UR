@@ -1,11 +1,11 @@
-package Command::Create;
+package UR::Object::Command::Create;
 
 use strict;
 use warnings;
 
 use YAML;
 
-class Command::Create {
+class UR::Object::Command::Create {
     is => 'Command::V2',
     is_abstract => 1,
     has_constant => {
@@ -27,11 +27,11 @@ sub execute {
         my $property = $self->__meta__->property_meta_for_name($property_name);
         if ( $property->is_many ) {
             $properties{$property_name} = \@values;
-            $display_ids{$property_name} = [ map { Command::CrudUtil->display_id_for_value($_) } @values ];
+            $display_ids{$property_name} = [ map { UR::Object::Command::CrudUtil->display_id_for_value($_) } @values ];
         }
         else {
             $properties{$property_name} = $values[0];
-            $display_ids{$property_name} = Command::CrudUtil->display_id_for_value($values[0]);
+            $display_ids{$property_name} = UR::Object::Command::CrudUtil->display_id_for_value($values[0]);
         }
     }
 

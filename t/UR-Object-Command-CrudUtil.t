@@ -8,7 +8,7 @@ use TestEnvCrud;
 use Test::Exception;
 use Test::More tests => 2;
 
-my %test = ( pkg => 'Command::CrudUtil', );
+my %test = ( pkg => 'UR::Object::Command::CrudUtil', );
 subtest 'setup' => sub{
     plan tests => 2;
 

@@ -18,8 +18,8 @@ subtest 'paths' => sub{
     my $test_data_path = TestEnv->test_data_path;
     isa_ok($test_data_path, 'Path::Class::Dir', 'test_data_path set');
 
-    my $test_data_dir = TestEnv->test_data_directory_for_package('Command::Awesome');
-    is($test_data_dir, $test_data_path->subdir('Command-Awesome'), 'test_data_dir_for_package Command::Awesome');
+    my $test_data_dir = TestEnv->test_data_directory_for_package('UR::Object::Command::Awesome');
+    is($test_data_dir, $test_data_path->subdir('UR-Object-Command-Awesome'), 'test_data_dir_for_package UR::Object::Command::Awesome');
 
 };
 

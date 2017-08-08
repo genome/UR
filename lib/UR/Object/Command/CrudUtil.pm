@@ -1,9 +1,9 @@
-package Command::CrudUtil;
+package UR::Object::Command::CrudUtil;
 
 use strict;
 use warnings 'FATAL';
 
-class Command::CrudUtil {
+class UR::Object::Command::CrudUtil {
     doc => 'Utils for CRUD commands',
 };
 

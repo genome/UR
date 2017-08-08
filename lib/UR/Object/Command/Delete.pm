@@ -1,9 +1,9 @@
-package Command::Delete;
+package UR::Object::Command::Delete;
 
 use strict;
 use warnings 'FATAL';
 
-class Command::Delete {
+class UR::Object::Command::Delete {
     is => 'Command::V2',
     is_abstract => 1,
     has_constant => {

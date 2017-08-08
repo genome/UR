@@ -1,9 +1,9 @@
-package Command::Update;
+package UR::Object::Command::Update;
 
 use strict;
 use warnings 'FATAL';
 
-class Command::Update {
+class UR::Object::Command::Update {
     is => 'Command::V2',
     is_abstract => 1,
     has => {
@@ -29,7 +29,7 @@ sub execute {
 
     my $new_value = $self->value;
     $new_value = undef if $new_value eq '';
-    my $new_value_id = Command::CrudUtil->display_id_for_value($new_value);
+    my $new_value_id = UR::Object::Command::CrudUtil->display_id_for_value($new_value);
 
     my $property_name = $self->property_name;
     my $target_name_ub_pl = $self->target_name_ub_pl;
@@ -38,7 +38,7 @@ sub execute {
     $self->status_message("Update %s %s...", $self->target_name_pl, $property_name);
     for my $obj( @objects ) {
         my $old_value = $obj->$property_name;
-        my $old_value_id = Command::CrudUtil->display_id_for_value($old_value);
+        my $old_value_id = UR::Object::Command::CrudUtil->display_id_for_value($old_value);
         if ( $self->only_if_null and defined $old_value ) {
             $self->status_message("FAILED_NOT_NULL\t%s\t%s", $obj->class, $obj->id, $old_value_id);
             next;

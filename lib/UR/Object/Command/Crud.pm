@@ -1,21 +1,21 @@
-package Command::Crud;
+package UR::Object::Command::Crud;
 
 use strict;
 use warnings 'FATAL';
 
-use Command::Create;
-use Command::Copy;
-use Command::Delete;
-use Command::Update;
-use Command::UpdateTree;
-use Command::UpdateIsMany;
-use Command::CrudUtil;
+use UR::Object::Command::Create;
+use UR::Object::Command::Copy;
+use UR::Object::Command::Delete;
+use UR::Object::Command::Update;
+use UR::Object::Command::UpdateTree;
+use UR::Object::Command::UpdateIsMany;
+use UR::Object::Command::CrudUtil;
 use Lingua::EN::Inflect;
 use List::MoreUtils;
 use Sub::Install;
 use UR::Object::Command::List;
 
-class Command::Crud {
+class UR::Object::Command::Crud {
     id_by => {
         target_class => { is => 'Text' },
     },
@@ -257,7 +257,7 @@ sub _build_create_command {
 
     my $create_meta = UR::Object::Type->define(
         class_name => $create_command_class_name,
-        is => 'Command::Create',
+        is => 'UR::Object::Command::Create',
         has => \%properties,
         has_constant_transient => {
             namespace => { value => $self->namespace, },
@@ -280,7 +280,7 @@ sub _build_copy_command {
 
     UR::Object::Type->define(
         class_name => $copy_command_class_name,
-        is => 'Command::Copy',
+        is => 'UR::Object::Command::Copy',
         doc => sprintf('copy a %s', $self->target_name),
         has => {
             source => {
@@ -336,7 +336,7 @@ sub _build_update_command {
     if ( not $update_meta ) {
         UR::Object::Type->define(
             class_name => $update_command_class_name,
-            is => 'Command::UpdateTree',
+            is => 'UR::Object::Command::UpdateTree',
             doc => 'properties on '.$self->target_name_pl,
         );
     }
@@ -410,7 +410,7 @@ sub _build_update_property_sub_command {
 
     UR::Object::Type->define(
         class_name => $update_property_class_name,
-        is => 'Command::Update',
+        is => 'UR::Object::Command::Update',
         has => {
             $self->target_name_ub_pl => {
                 is => $self->target_class,
@@ -457,7 +457,7 @@ sub _build_update_is_many_property_sub_commands {
         push @update_sub_command_class_names, $sub_command_class_name;
         UR::Object::Type->define(
             class_name => $sub_command_class_name,
-            is => 'Command::UpdateIsMany',
+            is => 'UR::Object::Command::UpdateIsMany',
             has => {
                 $self->target_name_ub_pl => {
                     is => $self->target_class,
@@ -496,7 +496,7 @@ sub _build_delete_command {
 
     UR::Object::Type->define(
         class_name => $delete_command_class_name,
-        is => 'Command::Delete',
+        is => 'UR::Object::Command::Delete',
         has => {
             $self->target_name_ub => {
                 is => $self->target_class,

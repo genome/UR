@@ -11,12 +11,12 @@ use Test::More tests => 1;
 subtest 'exclude properties' => sub{
     plan tests => 5;
 
-    use_ok('Command::Create') or die;
-    use_ok('Command::Crud') or die;
+    use_ok('UR::Object::Command::Create') or die;
+    use_ok('UR::Object::Command::Crud') or die;
 
-    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'create' } Command::Crud->buildable_sub_command_names;
+    my %sub_command_configs = map { $_ => { skip => 1 } } grep { $_ ne 'create' } UR::Object::Command::Crud->buildable_sub_command_names;
     $sub_command_configs{create}->{exclude} = [qw/ title /];
-    Command::Crud->create_command_subclasses(
+    UR::Object::Command::Crud->create_command_subclasses(
         target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );

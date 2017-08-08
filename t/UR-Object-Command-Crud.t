@@ -13,7 +13,7 @@ subtest 'setup' => sub{
     plan tests => 1;
 
     %test = (
-        pkg => 'Command::Crud',
+        pkg => 'UR::Object::Command::Crud',
         target_class => 'Test::Muppet',
         namespace => 'Test::Muppet::Command',
         target_name => 'test muppet',
@@ -28,21 +28,21 @@ subtest 'setup' => sub{
 subtest 'create_command_subclasses' => sub{
     plan tests => 8;
 
-    throws_ok(sub{ Command::Crud->create_command_subclasses; }, qr/No target_class given/, 'fails w/o target_class');
+    throws_ok(sub{ UR::Object::Command::Crud->create_command_subclasses; }, qr/No target_class given/, 'fails w/o target_class');
 
-    my %sub_command_configs = map { $_ => { skip => 1 } } Command::Crud->buildable_sub_command_names;
+    my %sub_command_configs = map { $_ => { skip => 1 } } UR::Object::Command::Crud->buildable_sub_command_names;
     lives_ok(sub{
-            $test{crud} = Command::Crud->create_command_subclasses(
+            $test{crud} = UR::Object::Command::Crud->create_command_subclasses(
                 target_class => $test{target_class},
                 sub_command_configs => \%sub_command_configs,
                 );},
            'create_command_subclasses skipping all');
-    for ( Command::Crud->buildable_sub_command_names ) {
+    for ( UR::Object::Command::Crud->buildable_sub_command_names ) {
         ok(!UR::Object::Type->get($test{namespace}.'::'.ucfirst($_)), "did not create sub command for $_");
     }
     $test{crud}->delete;
 
-    lives_ok(sub{ $test{crud} = Command::Crud->create_command_subclasses(target_class => $test{target_class}); }, 'create_command_subclasses');
+    lives_ok(sub{ $test{crud} = UR::Object::Command::Crud->create_command_subclasses(target_class => $test{target_class}); }, 'create_command_subclasses');
 
 };
 
@@ -60,14 +60,14 @@ subtest 'crud and namespace target names' => sub{
 subtest 'commands' => sub{
     plan tests => 17;
 
-    for ( Command::Crud->buildable_sub_command_names ) {
+    for ( UR::Object::Command::Crud->buildable_sub_command_names ) {
         my $class_name = $test{crud}->sub_command_class_name_for($_);
         is($class_name, $test{namespace}.'::'.ucfirst($_), "$_ subcommand class name");
         lives_ok(sub { $class_name->__meta__; }, "$_ comand was created"); # will unit test individual commands
     }
 
-    is_deeply([sort $test{crud}->namespace_sub_command_names], [sort Command::Crud->buildable_sub_command_names], 'namespace_sub_command_names');
-    my @namespace_sub_command_classes = map { $test{crud}->sub_command_class_name_for($_); } Command::Crud->buildable_sub_command_names;
+    is_deeply([sort $test{crud}->namespace_sub_command_names], [sort UR::Object::Command::Crud->buildable_sub_command_names], 'namespace_sub_command_names');
+    my @namespace_sub_command_classes = map { $test{crud}->sub_command_class_name_for($_); } UR::Object::Command::Crud->buildable_sub_command_names;
     is_deeply([sort $test{crud}->namespace_sub_command_classes], [sort @namespace_sub_command_classes], 'namespace_sub_command_classes');
 
     my @property_names = sort (qw/ name title job friends best_friend /);
