@@ -1,0 +1,129 @@
+=pod
+
+=head1 Name
+
+UR::Object::Command::Crud
+
+=head1 Synopsis
+
+Automatic generation of CRUD (create, list (read), update and delete plus copy) sub commands for UR objects.
+
+=head2 Example
+
+See CrudTestEnv.pm in tests (t/) directory for class definitions.
+
+=head3 muppet.pl
+
+A script to manipulate muppets!
+
+#!/usr/bin/env perl
+
+use strict;
+use warnings 'FATAL';
+
+use UR;
+use UR::Object::Command::Crud;
+use TestEnvCrud;
+
+UR::Object::Command::Crud->create_command_classes(
+    target_class => 'Test:Muppet',
+    namespace => 'Muppet'
+    target_name => 'muppet',
+);
+
+Muppet::Command->execute_with_shell_params_and_exit();
+
+__END__
+
+=head1 Command Structure
+
+Each function will get a command. Under update, each property will get a command. If the relationship of the property is 'has many', there will be an add and remove command for the property.
+
+$ muppet.pl --help
+Sub-commands for muppet.pl:
+ copy         copy a muppet
+ create       create muppets
+ delete       delete muppet
+ list         muppets
+ update  ...  properties on muppets
+
+The update tree:
+
+$ muppet.pl update -h
+Sub-commands for muppet.pl update:
+ best-friend       update muppets best_friend
+ friends      ...  add/remove friends
+ job               update muppets job
+ name              update muppets name
+ title             update muppets title
+
+The add/remove friends tree:
+
+$ muppet.pl update friends --help
+Sub-commands for muppet.pl update friends:
+ add       friends to muppets
+ remove    friends from muppets
+
+=head1 Config
+
+=head2 Main Parameters
+
+=over
+
+=item *
+B<target_class> (required): The class name of the objects to create CRUD commands.
+
+=item *
+B<target_name> (optional): The space separated singular name of the objects. Default is to convert the class name from camel case to a space separated string. Our example, 'Test::Muppet' would be 'test muppet'. To make it just 'muppet', supply this value.
+
+=item *
+B<namespace> (optional): The class name to be the namespace ofthe commadn structure. By default, command is added to the target class, then sub commands are then created from that class name. Use if wanting to adjust the command line structure abd naming. Ex: 'Muppet::Command'
+
+=item *
+B<sub_command_configs> (optional): A HASH with command names as keys and config HASHes as values. See below for more details.  Ex: { list => { show => 'id,name' } ... }
+
+=back
+
+=head2 Sub Command Configs
+
+=head2 All Sub Commands
+
+=over
+
+=item *
+B<skip>: Skip, do not generate this sub command.
+
+=back
+
+=head2 Create
+
+=over
+
+=item *
+B<exclude> (optional): Exclude these properties, do not include them when creating an object.
+
+=back
+
+=head2 List
+
+=over
+
+=item *
+B<show> (optional): The default object properties to show. Give as a comma separated string. Ex: 'id,name,friends'.
+
+=item *
+B<order_by> (optional): The default order to list the objects in. The ID is the default. Give as string. Ex: 'name'.
+
+=back
+
+=head2 Update
+
+=over
+
+=item *
+B<exclude> (optional): Exclude these properties, do not make sub commmands for them.
+
+=item *
+B<only_if_null> (optional): Only allow updating of a property if it is null.
+
+=back

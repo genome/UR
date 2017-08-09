@@ -48,7 +48,7 @@ class Test::Job {
         name => { is => 'Text', },
     },
 };
-sub Test::Job::__display_name__ { $_[0]->name }
+sub Test::Job::__display_name__ { sprintf('%s (%s)', $_[0]->name, $_[0]->id) }
 
 class Test::Relationship {
     is  => 'UR::Object',
@@ -110,6 +110,6 @@ class Test::Muppet {
        },
     },
 };
-sub Test::Muppet::__display_name__ { $_[0]->name }
+sub Test::Muppet::__display_name__ { sprintf('%s (%s)', $_[0]->name, $_[0]->id) }
 
 1;

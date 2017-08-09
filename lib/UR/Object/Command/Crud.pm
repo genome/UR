@@ -103,21 +103,21 @@ sub _get_current_namespace_sub_commands_and_names {
 
 sub _add_to_namespace_sub_commands_and_names {
     my ($self, $name) = @_;
-    $self->namespace_sub_command_names([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_names, $name ]);
-    $self->namespace_sub_command_classes([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
+    $self->namespace_sub_command_names([ $self->namespace_sub_command_names, $name ]);
+    $self->namespace_sub_command_classes([ $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
 }
 
 sub _set_namespace_sub_commands_and_names {
     my $self = shift;
 
-    my @sub_command_classes = $self->namespace_sub_command_classes;
+    my @sub_command_classes = sort { $a cmp $b } List::MoreUtils::uniq $self->namespace_sub_command_classes;
     Sub::Install::reinstall_sub({
         code => sub{ @sub_command_classes },
         into => $self->namespace,
         as => 'sub_command_classes',
         });
 
-    my @sub_command_names = $self->namespace_sub_command_names;
+    my @sub_command_names = sort { $a cmp $b } List::MoreUtils::uniq $self->namespace_sub_command_names;
     Sub::Install::reinstall_sub({
         code => sub{ @sub_command_names },
         into => $self->namespace,
@@ -176,12 +176,14 @@ sub _build_list_command {
 
     my $show = delete $config{show};
     if ( $show ) {
-        push @has, show => { default_value => $show, };
+        $self->fatal_message('Invalid config for LIST `show` => %s', Data::Dumper::Dumper($show)) if ref $show;
+        push @has, show => { value => $show, };
     }
 
     my $order_by = delete $config{order_by};
     if ( $order_by ) {
-        push @has, order_by => { default_value => $order_by, };
+        $self->fatal_message('Invalid config for LIST `order_by` => %s', Data::Dumper::Dumper($order_by)) if ref $order_by;
+        push @has, order_by => { value => $order_by, };
     }
 
     $self->fatal_message('Unknown config for LIST: %s', Data::Dumper::Dumper(\%config)) if %config;
@@ -286,7 +288,7 @@ sub _build_copy_command {
             source => {
                 is => $self->target_class,
                 shell_args_position => 1,
-                doc => sprintf('the source %s to copy from', $self->target_name),
+                doc => sprintf('The source %s to copy.', $self->target_name),
             },
         },
     );
@@ -377,7 +379,6 @@ sub _build_update_command {
                 $property{name_pl} = $object_meta->plural_name;
                 $property{is_optional} = $object_meta->is_optional;
                 $property{data_type} = $object_meta->data_type;
-                $property{doc} = $object_meta->doc if $object_meta->doc;
             }
         }
         next if $properties_seen{$property_name};
@@ -416,12 +417,12 @@ sub _build_update_property_sub_command {
                 is => $self->target_class,
                 is_many => 1,
                 shell_args_position => 1,
-                doc => ucfirst($self->target_name_pl).' to update, resolved via string.',
+                doc => ucfirst($self->target_name_pl).' to update, resolved via query string.',
             },
             value => {
                 is => $property->{data_type},
                 valid_values => $property->{valid_values},
-                doc => $property->{doc},
+                doc => sprintf('New `%s` (%s) of the %s.', $property->{name}, $property->{data_type}, $self->target_name_pl),
             },
         },
         has_constant_transient => {
@@ -429,7 +430,7 @@ sub _build_update_property_sub_command {
             property_name => { value => $property->{name}, },
             only_if_null => { value => $property->{only_if_null}, },
         },
-        doc => sprintf('update %s %s', $self->target_name_pl, $property->{name}),
+        doc => sprintf('update %s %s%s', $self->target_name_pl, $property->{name}, ( $property->{only_if_null} ? ' [only if null]' : '' )),
     );
 
     $update_property_class_name;
@@ -463,20 +464,20 @@ sub _build_update_is_many_property_sub_commands {
                     is => $self->target_class,
                     is_many => 1,
                     shell_args_position => 1,
-                    doc => ucfirst($self->target_name_pl).' to update, resolved via string.',
+                    doc => sprintf('%s to update %s, resolved via query string.', ucfirst($self->target_name_pl), $property->{name_pl}),
                 },
                 'values' => => {
                     is => $property->{data_type},
                     is_many => 1,
                     valid_values => $property->{valid_values},
-                    doc => $property->{doc},
+                    doc => sprintf('%s (%s) to %s %s %s.', ucfirst($property->{name_pl}), $property->{data_type}, $function, ( $function eq 'add' ? 'to' : 'from' ), $self->target_name_pl),
                 },
             },
             has_constant_transient => {
                 namespace => { value => $self->namespace, },
                 property_function => { value => join('_', $function, $property->{name}), },
             },
-            doc => join(' ', $self->target_name_pl, $function, $property->{name_pl}),
+            doc => sprintf('%s to %s', $property->{name_pl}, $self->target_name_pl),
         );
     }
 
@@ -502,13 +503,13 @@ sub _build_delete_command {
                 is => $self->target_class,
                 shell_args_position => 1,
                 require_user_verify => 1,
-                doc => ucfirst($self->target_name).' to delete, resolved via text string.',
+                doc => ucfirst($self->target_name).' to delete, resolved via query string.',
             },
         },
         has_constant_transient => {
             namespace => { value => $self->namespace, },
         },
-        doc => 'delete '.$self->target_name,
+        doc => sprintf('delete %s', Lingua::EN::Inflect::A($self->target_name)),
     );
 
     $self->_add_to_namespace_sub_commands_and_names('delete');

@@ -6,7 +6,7 @@ use warnings 'FATAL';
 class UR::Object::Command::Update {
     is => 'Command::V2',
     is_abstract => 1,
-    has => {
+    has_constant_transient => {
         target_name_pl => { via => 'namespace', to => 'target_name_pl', },
         target_name_ub_pl => { via => 'namespace', to => 'target_name_ub_pl', },
     },
@@ -14,15 +14,7 @@ class UR::Object::Command::Update {
 };
 
 sub help_brief { $_[0]->__meta__->doc }
-sub help_detail {
-    my $class = shift;
-    my $help = 'Update '.$class->property_name.' on '.$class->target_name_pl.' Parameters are resolved via string.';
-    if ( $class->only_if_null ) {
-        $help .= " This property can only be updated if it is NULL.";
-    }
-    $help .= "\n\n";
-    $help;
-}
+sub help_detail { $_[0]->__meta__->doc }
 
 sub execute {
     my $self = shift;
