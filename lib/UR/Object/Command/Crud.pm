@@ -103,21 +103,21 @@ sub _get_current_namespace_sub_commands_and_names {
 
 sub _add_to_namespace_sub_commands_and_names {
     my ($self, $name) = @_;
-    $self->namespace_sub_command_names([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_names, $name ]);
-    $self->namespace_sub_command_classes([ List::MoreUtils::uniq sort { $a cmp $b } $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
+    $self->namespace_sub_command_names([ $self->namespace_sub_command_names, $name ]);
+    $self->namespace_sub_command_classes([ $self->namespace_sub_command_classes, $self->sub_command_class_name_for($name) ]);
 }
 
 sub _set_namespace_sub_commands_and_names {
     my $self = shift;
 
-    my @sub_command_classes = $self->namespace_sub_command_classes;
+    my @sub_command_classes = sort { $a cmp $b } List::MoreUtils::uniq $self->namespace_sub_command_classes;
     Sub::Install::reinstall_sub({
         code => sub{ @sub_command_classes },
         into => $self->namespace,
         as => 'sub_command_classes',
         });
 
-    my @sub_command_names = $self->namespace_sub_command_names;
+    my @sub_command_names = sort { $a cmp $b } List::MoreUtils::uniq $self->namespace_sub_command_names;
     Sub::Install::reinstall_sub({
         code => sub{ @sub_command_names },
         into => $self->namespace,
@@ -288,7 +288,7 @@ sub _build_copy_command {
             source => {
                 is => $self->target_class,
                 shell_args_position => 1,
-                doc => sprintf('the source %s to copy from', $self->target_name),
+                doc => sprintf('The source %s to copy.', $self->target_name),
             },
         },
     );
