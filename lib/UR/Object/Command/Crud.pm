@@ -176,11 +176,13 @@ sub _build_list_command {
 
     my $show = delete $config{show};
     if ( $show ) {
+        $self->fatal_message('Invalid config for LIST `show` => %s', Data::Dumper::Dumper($show)) if ref $show;
         push @has, show => { value => $show, };
     }
 
     my $order_by = delete $config{order_by};
     if ( $order_by ) {
+        $self->fatal_message('Invalid config for LIST `order_by` => %s', Data::Dumper::Dumper($order_by)) if ref $order_by;
         push @has, order_by => { value => $order_by, };
     }
 
