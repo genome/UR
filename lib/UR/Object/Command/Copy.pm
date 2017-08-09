@@ -21,7 +21,7 @@ sub help_detail {
 
     Valid operators are '=', '+=', '-=', and '.='; function is same as in Perl.
     Example:
-    --changes "name.=-RT101912,foo=bar"\n\n),
+        --changes "name.=-RT101912,foo=bar"
 
     A value of 'undef' may be used to pass a Perl undef as the value.  Either `foo=` or `foo=''` can be used to set the value to an empty string.
 HELP
