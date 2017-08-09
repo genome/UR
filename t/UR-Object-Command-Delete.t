@@ -10,7 +10,7 @@ use Test::More tests => 3;
 
 my %test;
 subtest 'setup' => sub{
-    plan tests => 4;
+    plan tests => 6;
 
     use_ok('UR::Object::Command::Delete') or die;
     use_ok('UR::Object::Command::Crud') or die;
@@ -21,8 +21,11 @@ subtest 'setup' => sub{
         sub_command_configs => \%sub_command_configs,
     );
 
-    $test{cmd} = 'Test::Muppet::Command::Delete';
-    ok(UR::Object::Type->get($test{cmd}), 'delete command exists'),
+    $test{cmd_class} = 'Test::Muppet::Command';
+    ok(UR::Object::Type->get($test{cmd_class}), 'muppet command exists'),
+    $test{cmd} = $test{cmd_class}.'::Delete';
+    ok(UR::Object::Type->get($test{cmd}), 'muppet delete command exists'),
+    is_deeply([$test{cmd_class}->sub_command_classes], [$test{cmd}], 'only generated delete command');
 
     $test{elmo} = Test::Muppet->create(name => 'elmo');
     ok($test{elmo}, 'create elmo');

@@ -10,7 +10,7 @@ use Test::More tests => 3;
 
 my %test;
 subtest 'setup' => sub{
-    plan tests => 5;
+    plan tests => 7;
 
     use_ok('UR::Object::Command::Copy') or die;
     use_ok('UR::Object::Command::Crud') or die;
@@ -21,8 +21,11 @@ subtest 'setup' => sub{
         sub_command_configs => \%sub_command_configs,
     );
 
-    $test{cmd} = 'Test::Muppet::Command::Copy';
+    $test{cmd_class} = 'Test::Muppet::Command';
+    ok(UR::Object::Type->get($test{cmd_class}), 'muppet command exists'),
+    $test{cmd} = $test{cmd_class}.'::Copy';
     ok(UR::Object::Type->get($test{cmd}), 'muppet copy command exists'),
+    is_deeply([$test{cmd_class}->sub_command_classes], [$test{cmd}], 'only generated copy command');
 
     $test{ernie} = Test::Muppet->create(
         name => 'ernie',

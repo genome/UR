@@ -10,7 +10,7 @@ use Test::More tests => 7;
 
 my %test;
 subtest 'setup' => sub{
-    plan tests => 6;
+    plan tests => 9;
 
     use_ok('UR::Object::Command::Update') or die;
     use_ok('UR::Object::Command::Crud') or die;
@@ -21,6 +21,12 @@ subtest 'setup' => sub{
         target_class => 'Test::Muppet',
         sub_command_configs => \%sub_command_configs,
     );
+
+    $test{cmd_class} = 'Test::Muppet::Command';
+    ok(UR::Object::Type->get($test{cmd_class}), 'muppet command exists'),
+    $test{cmd} = $test{cmd_class}.'::Update';
+    ok(UR::Object::Type->get($test{cmd}), 'muppet update command exists'),
+    is_deeply([$test{cmd_class}->sub_command_classes], [$test{cmd}], 'only generated update command');
 
     $test{ernie} = Test::Muppet->create(name => 'ernie');
     ok($test{ernie}, 'create ernie');
