@@ -23,7 +23,7 @@ sub help_detail {
     Example:
         --changes "name.=-RT101912,foo=bar"
 
-    A value of 'undef' may be used to pass a Perl undef as the value.  Either `foo=` or `foo=''` can be used to set the value to an empty string.
+    A value of 'undef' may be used to pass a Perl undef as the value.  Either `foo=` [safer] or `foo=''` can be used to set the value to an empty string.
 HELP
 }
 
@@ -38,8 +38,7 @@ sub execute {
         my ($key, $op, $value) = $change =~ /^(.+?)(=|\+=|\-=|\.=)(.*)$/;
         $self->fatal_message("Invalid change: $change") unless $key and defined $op;
         $self->fatal_message('Invalid property %s for %s', $key, $copy->__display_name__) if !$copy->can($key);
-
-        $value = undef if $value =~ /^undef$/i;
+        $value = undef if $value eq '';
 
         if ($op eq '=') {
             $copy->$key($value);
