@@ -55,7 +55,7 @@ subtest 'copy' => sub{
     my $new = Test::Muppet->get(name => 'ernie sr');
     ok($new, 'created new muppet');
     is($new->title, 'dr', 'title is dr');
-    is($new->job, $test{ernie}->job, 'no job - he is retired!');
+    is($new->job, undef, 'no job - he is retired!');
 
     ok(UR::Context->commit, 'commit');
 
