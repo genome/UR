@@ -4,7 +4,6 @@ use strict;
 use warnings;
 
 use Path::Class;
-use Sys::Hostname;
 use UR;
 
 my $current_repo_path;
@@ -26,8 +25,6 @@ INIT { # runs after compilation, right before execution
 USE
     eval $use;
     die "FATAL: $@" if $@;
-
-    printf(STDERR "***** TEST ENV on %s *****\n", Sys::Hostname::hostname);
 }
 
 sub current_repo_path { $current_repo_path };
