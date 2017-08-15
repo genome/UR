@@ -3,10 +3,12 @@
 use strict;
 use warnings 'FATAL';
 
-use Path::Class;
-use Test::More tests => 2;
+use Path::Class 'file';
+use lib file(__FILE__)->dir->parent->parent->parent->parent->subdir("lib")->absolute->stringify;
+use lib file(__FILE__)->dir->absolute->stringify;
 
 use TestEnvCrud;
+use Test::More tests => 2;
 
 subtest 'ENVs' => sub{
     plan tests => 2;

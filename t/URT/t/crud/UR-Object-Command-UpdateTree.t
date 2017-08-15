@@ -3,8 +3,11 @@
 use strict;
 use warnings 'FATAL';
 
-use TestEnvCrud;
+use Path::Class 'file';
+use lib file(__FILE__)->dir->parent->parent->parent->parent->subdir("lib")->absolute->stringify;
+use lib file(__FILE__)->dir->absolute->stringify;
 
+use TestEnvCrud;
 use Test::More tests => 1;
 
 subtest 'tests' => sub{
