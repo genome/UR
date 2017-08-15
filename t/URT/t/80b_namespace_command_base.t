@@ -86,7 +86,7 @@ my @expected_modules = sort qw(URT/34Baseclass.pm URT/38Primary.pm URT/43Primary
                                URT/Test.pm);
 my @modules = sort $cmd->_modules_in_tree();
 # remove modules created by the 'ur update classes-from-db' test that may be running in parallel
-@modules = grep { $_ !~ m/Car.pm|Person.pm|Employee.pm/ } @modules; 
+@modules = grep { $_ !~ m/Car.pm|Person.pm|Employee.pm|CrudTestClasses.pm/ } @modules; 
 is_deeply(\@modules, \@expected_modules, '_modules_in_tree with no args is correct');
 
 my @expected_class_names = sort qw(URT::34Baseclass URT::38Primary URT::43Primary URT::FakeDBI URT::ObjWithHash URT::Thingy
@@ -98,7 +98,7 @@ my @expected_class_names = sort qw(URT::34Baseclass URT::38Primary URT::43Primar
                                    URT::Test);
 my @class_names = sort $cmd->_class_names_in_tree;
 # remove classes created by the 'ur update classes-from-db' test that may be running in parallel
-@class_names = grep { $_ !~ m/URT::Car|URT::Person|URT::Employee/ } @class_names; 
+@class_names = grep { $_ !~ m/URT::Car|URT::Person|URT::Employee|CrudTestClasses/ } @class_names; 
 is_deeply(\@class_names, \@expected_class_names, '_class_names_in_tree with no args is correct');
 
 

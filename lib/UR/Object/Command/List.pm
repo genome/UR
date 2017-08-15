@@ -75,8 +75,6 @@ class UR::Object::Command::List {
     doc => 'lists objects matching the specified expression',
 };
 
-sub sub_command_sort_position { .2 };
-
 sub create {
     my $class = shift;
     my $self = $class->SUPER::create(@_);
