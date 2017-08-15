@@ -1,7 +1,7 @@
 package TestEnv;
 
 use strict;
-use warnings;
+use warnings 'FATAL';
 
 use UR;
 

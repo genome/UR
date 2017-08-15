@@ -7,7 +7,7 @@ use Path::Class 'file';
 use lib file(__FILE__)->dir->parent->parent->parent->parent->subdir("lib")->absolute->stringify;
 use lib file(__FILE__)->dir->absolute->stringify;
 
-use TestEnvCrud;
+use CrudTestClasses;
 use Test::More tests => 1;
 
 subtest 'exclude properties' => sub{
