@@ -475,7 +475,7 @@ is how one-to-one relationships are implemented.
 =item via property
 
 When a class has some object accessor property, and it is helpful for an
-object to assumme the value of the remote class's properties, you can set 
+object to assume the value of the remote class's properties, you can set
 up a 'via' property.  In the example above, an object of this class 
 gets the value of its 'bar' property via the 'other' object it's linked
 to, from that object's 'bar' property.
