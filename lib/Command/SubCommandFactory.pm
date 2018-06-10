@@ -61,7 +61,7 @@ sub _build_sub_command_mapping {
     my @target_class_names;
     for my $target_path (@target_paths) { 
         my $target = $target_path;
-        $target =~ s#$base_path\/$ref_path/##; 
+        $target =~ s#\Q$base_path\E\/$ref_path/##;
         $target =~ s/\.pm//;
 
         my $target_base_class = $class->_target_base_class;
