@@ -24,6 +24,7 @@ sub _json {
 
     $json = JSON->new;
     foreach my $opt ( @{ $self->encode_options } ) {
+        local $@;
         eval { $json = $json->$opt; };
         if ($@) {
             Carp::croak("Can't initialize JSON object for encoding.  Calling method $opt from encode_options died: $@");
