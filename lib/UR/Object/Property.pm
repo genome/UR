@@ -99,7 +99,10 @@ sub _convert_data_type_for_source_class_to_final_class {
         else {
             my ($ns_value_class, $ur_value_class);
 
-            if ($ns and $ns->can("get")) {
+            if ($ns
+                and $ns ne 'UR' and $ns ne 'URT'
+                and $ns->can("get")
+            ) {
                 $ns_value_class = $ns . '::Value::' . $foreign_class;
                 if ($ns_value_class->can('__meta__')) {
                     $final_class = $ns_value_class;
@@ -108,13 +111,11 @@ sub _convert_data_type_for_source_class_to_final_class {
 
             if (!$final_class) {
                 $ur_value_class = 'UR::Value::' . $foreign_class;
-                if ($ur_value_class->can('__meta__')) {
-                    $final_class = $ur_value_class;
-                }
-            }
-            if (!$final_class) {
-                $ur_value_class = 'UR::Value::' . ucfirst(lc($foreign_class));
-                if ($ur_value_class->can('__meta__')) {
+                my $normalized_ur_value_class = 'UR::Value::' . ucfirst(lc($foreign_class));
+                if ($normalized_ur_value_class->can('__meta__')) {
+                    $final_class = $normalized_ur_value_class;
+
+                } elsif ($ur_value_class->can('__meta__')) {
                     $final_class = $ur_value_class;
                 }
             }
