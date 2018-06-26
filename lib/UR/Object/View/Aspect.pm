@@ -182,6 +182,7 @@ no warnings;
     my $aspect_meta = $aspect_type->__meta__;
 
     my $delegate_view;
+    local $@;
     eval {
         $delegate_view = $aspect_type->create_view(
             subject_class_name => $aspect_type,
