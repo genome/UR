@@ -78,6 +78,7 @@ sub execute {
 
 
         my $method_name = join('::',$target_class, $method);
+        local $@;
         if ($wantarray) {
             my @retval;
             eval { no strict 'refs'; @retval = &{$method_name}(@arglist); };
