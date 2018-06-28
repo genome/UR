@@ -156,16 +156,6 @@ no warnings;
             Carp::confess("Undefined aspect type. Set 'is' for $name in class " . $property_meta->class_name);
         }
 
-        unless ($aspect_type) {
-            if (my $delegated_to_meta = $property_meta->final_property_meta) {
-                $aspect_type = $delegated_to_meta->data_type;
-            }
-        }
-
-        unless ($aspect_type) {
-            Carp::confess("Property meta for class ".$property_meta->class_name." property ".$property_meta->property_name." has no data_type");
-        }
-
         unless ($aspect_type->can("__meta__")) {
             Carp::croak("$aspect_type has no meta data?  cannot generate a view for $subject_class_name $name!"); 
         }
