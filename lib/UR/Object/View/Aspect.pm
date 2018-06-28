@@ -215,12 +215,11 @@ no warnings;
         my $aspect_property_meta = $aspect_meta->property($aspect_param_name);
         no strict; no warnings;
         next if (!$aspect_property_meta or !$property_meta);
-        if ($aspect_property_meta->reverse_as() eq $name) {
-            
-        }
-        elsif ($property_meta->reverse_as eq $aspect_param_name) {
-        }
-        else {
+
+        if ($aspect_property_meta->reverse_as ne $name
+            and
+            $property_meta->reverse_as ne $aspect_param_name
+        ) {
             $delegate_view->add_aspect(ref($aspect_params) ? %$aspect_params : $aspect_params);
         }
     }
