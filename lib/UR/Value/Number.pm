@@ -9,4 +9,8 @@ UR::Object::Type->define(
     is => ['UR::Value'],
 );
 
+sub __display_name__ {
+    shift->id + 0;
+}
+
 1;
