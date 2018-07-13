@@ -130,6 +130,7 @@ sub _convert_data_type_for_source_class_to_final_class {
             return $foreign_class;
         }
         else {
+            local $@;
             eval "use $foreign_class;";
             if (!$@) {
                 return $foreign_class;

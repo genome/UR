@@ -68,6 +68,7 @@ sub _generate_content_for_aspect {
     #warn $aspect_name if ref($subject) =~ /Set/;
 
     my @value;
+    local $@;
     eval {
         @value = $subject->$aspect_name;
     };
