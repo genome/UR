@@ -3,6 +3,11 @@
 /.build
 !META.json
 /Build
+/MYMETA.json
+/MYMETA.yml
+/_build/
+/blib/
+
 
 # Carton
 /local/
