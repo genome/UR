@@ -137,7 +137,7 @@ many class-meta attributes such as 'id_generator', 'valid_signals', and 'doc'.
 
 Roles may implement operator overloading via the 'use overload' mechanism.
 
-Roles also have unique atributes to declare restrictions on their use.
+Roles also have unique attributes to declare restrictions on their use.
 
 =over 4
 
