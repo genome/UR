@@ -291,6 +291,9 @@ sub _get_display_fields_for_property {
     }
     elsif ($property->is_calculated) {
         if ($property->column_name) {
+            if (! $property->is_mutable) {
+                push @fields, q(is_mutable => 0);
+            }
             push @fields, q(column_name => ') . $property->column_name . q(');
         }
         if (my $calc_from = $property->calculate_from) {

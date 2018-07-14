@@ -152,6 +152,7 @@ my $test_class_definition = q(
         },
         calc_immutable_columned => {
             is => 'Text',
+            is_mutable => 0,
             column_name => 'calc_immutable_columned_column',
             calculate_from => 'some_enum',
             calculate => q($some_enum . "foo"),
