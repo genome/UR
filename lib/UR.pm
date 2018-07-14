@@ -42,7 +42,7 @@ for my $e (keys %ENV) {
     if ($@) {
         my $path = __FILE__;
         $path =~ s/.pm$//;
-        my @files = glob($path . '/Env/*');
+        my @files = glob("\Q${path}\E/Env/*");
         my @vars = map { /UR\/Env\/(.*).pm/; $1 } @files;
         print STDERR "Environment variable $e set to $ENV{$e} but there were errors using UR::Env::$e:\n"
         . "Available variables:\n\t"

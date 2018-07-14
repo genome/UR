@@ -1275,7 +1275,7 @@ sub sub_command_classes {
     return unless @paths;
     @paths =
         grep { s/\.pm$// }
-        map { glob("$_/*") }
+        map { glob("\Q$_\E/*") }
         grep { -d $_ }
         grep { defined($_) and length($_) }
         @paths;

@@ -211,7 +211,7 @@ sub _class_names_in_tree {
     my @class_names;
     for my $module (@modules) {
         my $class = $module;
-        $class =~ s/^$lib_path\///;
+        $class =~ s/^\Q$lib_path\E\///;
         $class =~ s/\//::/g;
         $class =~ s/\.pm$//;
 

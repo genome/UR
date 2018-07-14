@@ -38,8 +38,8 @@ sub used_libs {
     for my $inc (@INC) {
         $inc =~ s/\/+$//;
         my $abs_inc = Cwd::abs_path($inc) || $inc; # should already be expanded by UR.pm
-        next if (grep { $_ =~ /^$abs_inc$/ } @compiled_inc);
-        next if (grep { $_ =~ /^$abs_inc$/ } @perl5lib);
+        next if (grep { $_ =~ /^\Q$abs_inc\E$/ } @compiled_inc);
+        next if (grep { $_ =~ /^\Q$abs_inc\E$/ } @perl5lib);
         next if ((File::Spec->splitdir($inc))[-1] eq $Config{archname});
         push @extra, $inc;
     }
