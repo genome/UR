@@ -290,6 +290,9 @@ sub _get_display_fields_for_property {
         # do nothing
     }
     elsif ($property->is_calculated) {
+        if ($property->column_name) {
+            push @fields, q(column_name => ') . $property->column_name . q(');
+        }
         if (my $calc_from = $property->calculate_from) {
             if ($calc_from and @$calc_from == 1) {
                 push @fields, "calculate_from => '" . $calc_from->[0] . "'";
