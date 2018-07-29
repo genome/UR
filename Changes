@@ -1,6 +1,9 @@
 Revision history for UR
 
 {{$NEXT}}
+        Fixed test breakage from changes in the JSON serialzer for Views
+        Fixed test breakage from behavior changes in Perl 5.26 and 5.28
+        Other misc bug fixes
 
 0.46 2017-03-24T19:40:54Z
         Documentation fixes
