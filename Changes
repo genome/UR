@@ -2,6 +2,10 @@ Revision history for UR
 
 {{$NEXT}}
 
+0.46 2017-03-24T19:40:54Z
+        Documentation fixes
+        Bug fixes for the mysql data source
+
 0.45 2016-09-21T22:48:23Z
         UR now supports Roles.  See the docs in UR::Role.
         -limit and -offset are now handled in the database where possible.

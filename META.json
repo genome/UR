@@ -103,7 +103,7 @@
          "web" : "https://github.com/genome/UR"
       }
    },
-   "version" : "0.45",
+   "version" : "0.46",
    "x_contributors" : [
       "Adam Coffman <acoffman@genome.wustl.edu>",
       "Adam Dukes <adam.dukes@gmail.com>",
@@ -147,6 +147,14 @@
       "jschindl <jschindl@watson.wustl.edu>",
       "lcarmich <lcarmich@watson.wustl.edu>",
       "thepler <thepler@watson.wustl.edu>"
+      "Eddie Belter <ebelter@genome.wustl.edu>",
+      "Jim Eldred <jeldred@genome.wustl.edu>",
+      "Yanick Champoux <yanick@babyl.dyndns.org>",
+      "Thomas B. Mooney <tmooney@genome.wustl.edu>",
+      "Thomas B. Mooney <mooney@wustl.edu>",
+      "Anthony Brummett <abrummet@genome.wustl.edu>",
+      "Anthony Brummett <brummett@gmail.com>",
+      "Eddie Belter <ebelter@gmail.com>"
    ],
    "x_serialization_backend" : "JSON::PP version 2.97001",
    "x_static_install" : 0
