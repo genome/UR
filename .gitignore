@@ -1,7 +1,7 @@
 # Minilla
 /UR-*
 /.build
-!META.json
+META.json
 /Build
 /MYMETA.json
 /MYMETA.yml
