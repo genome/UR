@@ -5,7 +5,7 @@ package UR::DataSource::FileMux;
 use UR;
 use strict;
 use warnings;
-our $VERSION = "0.46"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 class UR::DataSource::FileMux {
     is => ['UR::DataSource'],

@@ -8,7 +8,7 @@ package UR::Context;
 use strict;
 use warnings;
 
-our $VERSION = "0.46"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 
 # A wrapper around the method of the same name in UR::DataSource::* to iterate over the
