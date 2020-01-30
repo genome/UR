@@ -2,7 +2,7 @@
 
 =head1 NAME
 
-UR::Manual::Cookbook - Recepies for getting things working
+UR::Manual::Cookbook - Recipes for getting things working
 
 =head1 Database Changes
 
