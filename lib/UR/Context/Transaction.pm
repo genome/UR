@@ -62,7 +62,7 @@ sub begin {
     );
 
     unless ($self) {
-        Carp::confess("Failed to being transaction!");
+        Carp::confess("Failed to begin transaction!");
     }
 
     push @open_transaction_stack, $self;
