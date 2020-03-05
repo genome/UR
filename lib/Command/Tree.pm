@@ -369,7 +369,7 @@ sub _build_sub_command_mapping {
 
             # find My::Foo::Command::*
             if (-d $subdir_full_path) {
-                my @files = glob("\Q${subdir_full_path}/*");
+                my @files = glob("\Q${subdir_full_path}/\E*");
                 for my $file (@files) {
                     my $basename = basename($file);
                     $basename =~ s/.pm$// or next;
