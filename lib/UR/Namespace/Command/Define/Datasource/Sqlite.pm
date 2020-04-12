@@ -3,7 +3,7 @@ package UR::Namespace::Command::Define::Datasource::Sqlite;
 use strict;
 use warnings;
 use UR;
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 use IO::File;
 

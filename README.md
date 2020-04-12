@@ -5,7 +5,7 @@ UR - rich declarative transactional objects
 
 # VERSION
 
-This document describes UR version 0.45
+This document describes UR version 0.47
 
 # SYNOPSIS
 

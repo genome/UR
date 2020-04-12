@@ -8,7 +8,7 @@ BEGIN {
     require UR::Context::Transaction;
 };
 
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 UR::Object::Type->define(
     class_name => __PACKAGE__,

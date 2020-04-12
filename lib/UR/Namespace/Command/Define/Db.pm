@@ -3,7 +3,7 @@ package UR::Namespace::Command::Define::Db;
 use warnings;
 use strict;
 use UR;
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 use IO::File; # required to import symbols used below
 
 UR::Object::Type->define(

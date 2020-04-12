@@ -25,7 +25,7 @@ use warnings;
 # with that out of the way... on to the show!
 
 require UR;
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 use File::Basename;
 

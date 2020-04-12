@@ -3,7 +3,7 @@ package UR::Doc::Pod2Html;
 use strict;
 use warnings;
 
-our $VERSION = "0.45"; # UR $VERSION;
+our $VERSION = "0.47"; # UR $VERSION;
 
 use Data::Dumper;
 

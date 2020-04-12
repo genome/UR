@@ -7,7 +7,7 @@ require UR;
 use Lingua::EN::Inflect;
 use Class::AutoloadCAN;
 
-our $VERSION = "0.45"; # UR $VERSION;;
+our $VERSION = "0.47"; # UR $VERSION;
 our @CARP_NOT = qw( UR::DataSource::RDBMS UR::Object::Type );
 
 # class_meta and r_class_meta duplicate the functionality if two properties of the same name,

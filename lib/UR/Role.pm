@@ -23,7 +23,7 @@ our @CARP_NOT = qw(UR::Object::Type);
 use Exporter qw(import);
 our @EXPORT_OK = qw(before after around);
 
-our $VERSION = "0.45"; # UR $VERSION;;
+our $VERSION = "0.47"; # UR $VERSION;
 
 Class::Autouse->sugar(\&_define_role);
 
