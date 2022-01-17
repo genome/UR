@@ -2,6 +2,7 @@
 use strict;
 use warnings;
 use Test::More tests => 80;
+use Test::Deep;
 
 use File::Basename;
 use lib File::Basename::dirname(__FILE__)."/../../../lib";
@@ -37,7 +38,7 @@ sub test_column_details {
 
     my @expected = ( { TABLE_NAME  => 'inline',
                        COLUMN_NAME => 'id',
-                       DATA_TYPE   => 'integer',
+                       DATA_TYPE   => re(qr/^integer$/i),
                        COLUMN_SIZE => undef,
                        NULLABLE    => 1,
                        COLUMN_DEF  => undef,
@@ -50,7 +51,7 @@ sub test_column_details {
                        COLUMN_DEF  => 'some name',
                      },
                   );
-    is_deeply(\@results,
+    cmp_deeply(\@results,
               \@expected,
                'column details for table inline are correct');
 }
