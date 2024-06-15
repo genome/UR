@@ -38,7 +38,8 @@ sub server {
     my $super_server = $self->super_can('server');
     if (@_) {
         # unusual case, setting the server
-        return $super_server($self,@_);
+        my $server = $super_server->($self,@_);
+        return $server;
     }
 
     my $server = $super_server->($self);
